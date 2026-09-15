@@ -1,6 +1,11 @@
+![PageEcho](https://raw.githubusercontent.com/Chtrrrrrrr/PageEcho/main/assets/banner.png)
+
 # PageEcho · 页面回声
 
 > 在任意网页留下一句话。当你再次访问并满足条件时，它会在页面里滑出。
+
+> [!NOTE]
+> 本项目是 **vibecoding** 产物：代码、界面与文案由 AI 结对生成，并由 254 项自动化测试守住行为与设计规则。请在安装前自行审阅源码。
 
 ## 功能
 
@@ -25,6 +30,7 @@ Chrome / Edge / Brave（Manifest V3）与 Firefox 115+。
 ```
 manifest.json          MV3 清单（同时声明 service_worker 与 background.scripts 以兼容 Firefox）
 icons/                 由 tools/make-icons.ps1 生成的图标
+assets/                README 用的横幅图
 src/
   core/
     ext.js             跨浏览器 API 适配（browser 的 Promise / chrome 的回调）
@@ -49,7 +55,7 @@ tools/                 图标生成与四个测试套件（core / service worker
 
 ```bash
 npm install     # 仅为测试安装 jsdom
-npm test        # core / service worker / 端到端 / 管理页与弹窗，共 240 项检查
+npm test        # core / service worker / 端到端 / 管理页与弹窗，共 254 项检查
 npm run icons   # 重新生成 icons/*.png
 ```
 

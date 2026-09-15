@@ -9,7 +9,6 @@
     "test:sw": "node tools/swtest.js",
     "test:dom": "node tools/domtest.js",
     "test:ui": "node tools/uitest.js",
-    "fixture": "node tools/serve-fixture.js 8791",
     "icons": "powershell -ExecutionPolicy Bypass -File tools/make-icons.ps1"
   },
   "devDependencies": {
