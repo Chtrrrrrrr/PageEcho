@@ -1,0 +1,818 @@
+/*
+ * PageEcho — shared stylesheet.
+ *
+ * Design language
+ *   flat surfaces  — no gradients, hairline borders, colour blocks only
+ *   frosted glass  — translucent overlays behind backdrop-filter blur
+ *   soft light     — depth from a *crisp* 1px highlight plus one tight,
+ *                    low-alpha shadow; sunken controls use a single inset.
+ *   readable type  — 14px base, 15px body copy, nothing below 12px
+ *   density        — from layout (columns, merged rows, dropped copy), never
+ *                    from shrinking type or tightening leading
+ *
+ * Every selector is scoped under .pe-root so the same string works inside a
+ * shadow root (content script) and inside a normal page (manager / popup).
+ * PE.styles.shadowHost carries the :host reset for shadow roots.
+ */
+(function () {
+  'use strict';
+
+  var g = globalThis;
+  var PE = (g.PE = g.PE || {});
+
+  var CSS = `
+.pe-root {
+  /* ---- cool palette ------------------------------------------------ */
+  --pe-accent: #4d9fe0;
+  --pe-accent-hi: #5fabeb;
+  --pe-accent-ink: #04121d;
+  --pe-accent-soft: rgba(77, 159, 224, 0.13);
+  --pe-accent-line: rgba(77, 159, 224, 0.4);
+  --pe-ok: #3fb894;
+  --pe-ok-soft: rgba(63, 184, 148, 0.13);
+  --pe-info: #9b8cf0;
+  --pe-info-soft: rgba(155, 140, 240, 0.13);
+  --pe-danger: #e26a86;
+  --pe-danger-ink: #2a0710;
+  --pe-danger-soft: rgba(226, 106, 134, 0.13);
+  --pe-danger-tint: rgba(226, 106, 134, 0.3);
+  --pe-danger-line: rgba(226, 106, 134, 0.62);
+
+  /* ---- surfaces: flat fills, frosted overlays ---------------------- */
+  --pe-bg: rgba(15, 19, 26, 0.82);
+  --pe-bg-solid: #14181f;
+  --pe-flat: rgba(255, 255, 255, 0.045);
+  --pe-flat-hi: rgba(255, 255, 255, 0.08);
+  --pe-sunken: rgba(0, 0, 0, 0.26);
+
+  --pe-fg: #e7ecf4;
+  --pe-fg-dim: #98a5b8;
+  --pe-fg-faint: #71809a;
+  --pe-line: rgba(255, 255, 255, 0.09);
+  --pe-line-strong: rgba(255, 255, 255, 0.17);
+
+  /* ---- depth: one tight shadow, one crisp highlight ---------------- */
+  --pe-e1: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --pe-e2: 0 1px 2px rgba(0, 0, 0, 0.24), 0 6px 16px rgba(0, 0, 0, 0.22);
+  --pe-e3: 0 2px 4px rgba(0, 0, 0, 0.26), 0 18px 44px rgba(0, 0, 0, 0.38);
+  --pe-in-1: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  --pe-in-2: inset 0 2px 5px rgba(0, 0, 0, 0.34);
+  --pe-hi: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  --pe-blur: 16px;
+
+  /* ---- type scale: readable first, whole-pixel line boxes ----------- */
+  --pe-fs-micro: 12px;
+  --pe-fs-sm: 13px;
+  --pe-fs-md: 13px;
+  --pe-fs-base: 14px;
+  --pe-fs-body: 15px;
+  --pe-fs-title: 15.5px;
+
+  --pe-r-lg: 16px;
+  --pe-r: 12px;
+  --pe-r-sm: 8px;
+
+  --pe-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", Roboto, sans-serif;
+  --pe-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Native widgets (select popups, scrollbars, carets) follow this instead of
+     the host page's color-scheme. */
+  color-scheme: dark;
+
+  font-family: var(--pe-font);
+  font-size: var(--pe-fs-base);
+  /* A px line-height inherits as a fixed value, so every line box — and every
+     border derived from it — lands on a whole pixel. */
+  line-height: 21px;
+  color: var(--pe-fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.pe-root[data-theme="light"] {
+  color-scheme: light;
+  --pe-accent: #1d6fae;
+  --pe-accent-hi: #2680c4;
+  --pe-accent-ink: #ffffff;
+  --pe-accent-soft: rgba(29, 111, 174, 0.11);
+  --pe-accent-line: rgba(29, 111, 174, 0.38);
+  --pe-ok: #1f8f6b;
+  --pe-ok-soft: rgba(31, 143, 107, 0.11);
+  --pe-info: #5b5fc0;
+  --pe-info-soft: rgba(91, 95, 192, 0.11);
+  --pe-danger: #c0405c;
+  --pe-danger-ink: #ffffff;
+  --pe-danger-soft: rgba(192, 64, 92, 0.1);
+  --pe-danger-tint: rgba(192, 64, 92, 0.16);
+  --pe-danger-line: rgba(192, 64, 92, 0.5);
+
+  --pe-bg: rgba(249, 251, 253, 0.86);
+  --pe-bg-solid: #f8fafc;
+  --pe-flat: rgba(16, 24, 40, 0.035);
+  --pe-flat-hi: rgba(16, 24, 40, 0.07);
+  --pe-sunken: rgba(16, 24, 40, 0.05);
+
+  --pe-fg: #141a24;
+  --pe-fg-dim: #515d70;
+  --pe-fg-faint: #7c8a9c;
+  --pe-line: rgba(16, 24, 40, 0.12);
+  --pe-line-strong: rgba(16, 24, 40, 0.22);
+
+  --pe-e1: 0 1px 2px rgba(16, 24, 40, 0.1);
+  --pe-e2: 0 1px 2px rgba(16, 24, 40, 0.1), 0 6px 16px rgba(16, 24, 40, 0.1);
+  --pe-e3: 0 2px 4px rgba(16, 24, 40, 0.12), 0 18px 40px rgba(16, 24, 40, 0.16);
+  --pe-in-1: inset 0 1px 2px rgba(16, 24, 40, 0.1);
+  --pe-in-2: inset 0 2px 5px rgba(16, 24, 40, 0.14);
+  --pe-hi: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+@media (prefers-color-scheme: light) {
+  .pe-root[data-theme="auto"] {
+    color-scheme: light;
+    --pe-accent: #1d6fae;
+    --pe-accent-hi: #2680c4;
+    --pe-accent-ink: #ffffff;
+    --pe-accent-soft: rgba(29, 111, 174, 0.11);
+    --pe-accent-line: rgba(29, 111, 174, 0.38);
+    --pe-ok: #1f8f6b;
+    --pe-ok-soft: rgba(31, 143, 107, 0.11);
+    --pe-info: #5b5fc0;
+    --pe-info-soft: rgba(91, 95, 192, 0.11);
+    --pe-danger: #c0405c;
+    --pe-danger-ink: #ffffff;
+    --pe-danger-soft: rgba(192, 64, 92, 0.1);
+    --pe-danger-tint: rgba(192, 64, 92, 0.16);
+    --pe-danger-line: rgba(192, 64, 92, 0.5);
+
+    --pe-bg: rgba(249, 251, 253, 0.86);
+    --pe-bg-solid: #f8fafc;
+    --pe-flat: rgba(16, 24, 40, 0.035);
+    --pe-flat-hi: rgba(16, 24, 40, 0.07);
+    --pe-sunken: rgba(16, 24, 40, 0.05);
+
+    --pe-fg: #141a24;
+    --pe-fg-dim: #515d70;
+    --pe-fg-faint: #7c8a9c;
+    --pe-line: rgba(16, 24, 40, 0.12);
+    --pe-line-strong: rgba(16, 24, 40, 0.22);
+
+    --pe-e1: 0 1px 2px rgba(16, 24, 40, 0.1);
+    --pe-e2: 0 1px 2px rgba(16, 24, 40, 0.1), 0 6px 16px rgba(16, 24, 40, 0.1);
+    --pe-e3: 0 2px 4px rgba(16, 24, 40, 0.12), 0 18px 40px rgba(16, 24, 40, 0.16);
+    --pe-in-1: inset 0 1px 2px rgba(16, 24, 40, 0.1);
+    --pe-in-2: inset 0 2px 5px rgba(16, 24, 40, 0.14);
+    --pe-hi: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .pe-root[data-theme="auto"] { color-scheme: dark; }
+}
+
+.pe-root * { box-sizing: border-box; }
+.pe-root p { margin: 0; }
+.pe-root button { font: inherit; color: inherit; }
+
+/* ------------------------------------------------------- layer + fab ----- */
+
+.pe-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  pointer-events: none;
+}
+.pe-layer > * { pointer-events: auto; }
+
+.pe-fab {
+  position: fixed;
+  bottom: 20px;
+  z-index: 2147483645;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--pe-line);
+  border-radius: 50%;
+  background: var(--pe-bg);
+  color: var(--pe-accent);
+  box-shadow: var(--pe-e2), var(--pe-hi);
+  backdrop-filter: blur(var(--pe-blur)) saturate(130%);
+  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(130%);
+  cursor: pointer;
+  opacity: 0.72;
+  pointer-events: auto;
+  transition: opacity 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.pe-fab:hover { opacity: 1; border-color: var(--pe-line-strong); }
+.pe-fab:active { box-shadow: var(--pe-in-2); }
+.pe-fab[data-side="right"] { right: 20px; }
+.pe-fab[data-side="left"] { left: 20px; }
+.pe-fab svg { width: 21px; height: 21px; display: block; }
+
+/* -------------------------------------------------------------- card ----- */
+
+.pe-card {
+  position: fixed;
+  bottom: 20px;
+  width: 364px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r-lg);
+  background: var(--pe-bg);
+  box-shadow: var(--pe-e3);
+  backdrop-filter: blur(var(--pe-blur)) saturate(130%);
+  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(130%);
+  overflow: hidden;
+  --pe-enter-x: 115%;
+}
+.pe-card[data-side="right"] { right: 20px; }
+.pe-card[data-side="left"] { left: 20px; --pe-enter-x: -115%; }
+.pe-card.pe-in { animation: pe-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.pe-card.pe-out { animation: pe-slide-out 0.2s ease-in forwards; }
+
+@keyframes pe-slide-in {
+  from { transform: translateX(var(--pe-enter-x)) scale(0.99); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
+}
+@keyframes pe-slide-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(var(--pe-enter-x)); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pe-card.pe-in { animation: pe-fade-in 0.18s ease; }
+  .pe-card.pe-out { animation: pe-fade-in 0.14s ease reverse forwards; }
+  @keyframes pe-fade-in { from { opacity: 0; } to { opacity: 1; } }
+}
+
+.pe-card__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 15px 15px 8px;
+  flex: none;
+}
+.pe-card__badge {
+  font-size: var(--pe-fs-micro);
+  line-height: 18px;
+  letter-spacing: 0.08em;
+  color: var(--pe-accent);
+  font-weight: 700;
+}
+.pe-card__ago {
+  font-size: var(--pe-fs-sm);
+  line-height: 18px;
+  color: var(--pe-fg-faint);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.pe-card__close {
+  border: 0;
+  background: transparent;
+  color: var(--pe-fg-faint);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--pe-r-sm);
+  display: inline-flex;
+  line-height: 1;
+}
+.pe-card__close:hover { background: var(--pe-flat-hi); color: var(--pe-fg); }
+
+.pe-card__body {
+  padding: 2px 15px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pe-card__text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--pe-fs-body);
+  line-height: 24px;
+}
+.pe-card__thread {
+  margin-top: 12px;
+  border-top: 1px solid var(--pe-line);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.pe-reply {
+  font-size: var(--pe-fs-sm);
+  line-height: 20px;
+  color: var(--pe-fg-dim);
+  background: var(--pe-flat);
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r-sm);
+  padding: 8px 11px;
+}
+.pe-reply__time {
+  display: block;
+  font-size: var(--pe-fs-micro);
+  line-height: 16px;
+  color: var(--pe-fg-faint);
+  margin-bottom: 2px;
+}
+
+.pe-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 9px;
+  padding: 0 15px 12px;
+  font-size: var(--pe-fs-sm);
+  line-height: 19px;
+  color: var(--pe-fg-faint);
+}
+.pe-card__meta > span + span::before {
+  content: "·";
+  margin-right: 9px;
+  opacity: 0.5;
+}
+.pe-card__url {
+  font-family: var(--pe-mono);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One row, always. The four buttons grow to share the width evenly, and a
+   fixed 6px gap keeps them reading as one toolbar rather than four islands. */
+.pe-card__foot {
+  display: flex;
+  gap: 6px;
+  padding: 11px 14px 13px;
+  border-top: 1px solid var(--pe-line);
+  background: var(--pe-flat);
+  flex: none;
+  flex-wrap: nowrap;
+}
+.pe-card__foot > .pe-btn {
+  flex: 1 1 auto;
+  padding: 0 10px;
+}
+/* The snooze picker is a temporary menu: it may use two rows. */
+.pe-card__foot--snooze {
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+/* ---------------------------------------------------------- controls ----- */
+
+.pe-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: var(--pe-fs-md);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--pe-fg);
+  background: var(--pe-flat);
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r-sm);
+  box-shadow: var(--pe-e1), var(--pe-hi);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+.pe-btn:hover { background: var(--pe-flat-hi); border-color: var(--pe-line-strong); }
+.pe-btn:active { box-shadow: var(--pe-in-2); }
+/* Filled buttons take depth from the drop shadow only. The crisp top
+   highlight (--pe-hi) is a light-theme white line: on a saturated fill it
+   reads as a bright fringe, and because an inset shadow is clipped to the
+   padding box it arcs visibly around the corners. Their border is also painted
+   in the fill colour instead of transparent, so no 1px ring shows through. */
+.pe-btn--primary {
+  background: var(--pe-accent);
+  border-color: var(--pe-accent);
+  color: var(--pe-accent-ink);
+  font-weight: 650;
+  box-shadow: var(--pe-e1);
+}
+.pe-btn--primary:hover { background: var(--pe-accent-hi); border-color: var(--pe-accent-hi); }
+/* Destructive actions escalate in three visible steps:
+   rose label -> clearly rose-tinted hover -> solid fill once armed. */
+.pe-btn--danger { color: var(--pe-danger); }
+.pe-btn--danger:hover {
+  background: var(--pe-danger-tint);
+  border-color: var(--pe-danger-line);
+  color: var(--pe-danger);
+}
+.pe-btn--danger-armed {
+  background: var(--pe-danger);
+  border-color: var(--pe-danger);
+  color: var(--pe-danger-ink);
+  font-weight: 650;
+  box-shadow: var(--pe-e1);
+}
+.pe-btn--ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--pe-fg-dim); }
+.pe-btn--ghost:hover { background: var(--pe-flat-hi); color: var(--pe-fg); }
+.pe-btn--block { width: 100%; }
+.pe-btn--sm { min-height: 28px; padding: 0 10px; }
+.pe-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.pe-input,
+.pe-textarea,
+.pe-select {
+  width: 100%;
+  border: 1px solid var(--pe-line);
+  background: var(--pe-sunken);
+  box-shadow: var(--pe-in-1);
+  color: var(--pe-fg);
+  border-radius: var(--pe-r-sm);
+  padding: 8px 11px;
+  font: inherit;
+  font-size: var(--pe-fs-base);
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.pe-input,
+.pe-select {
+  height: 32px;
+  line-height: 30px;
+  padding: 0 11px;
+}
+.pe-textarea { resize: vertical; min-height: 96px; line-height: 22px; }
+.pe-input:focus,
+.pe-textarea:focus,
+.pe-select:focus {
+  border-color: var(--pe-accent-line);
+  box-shadow: var(--pe-in-1), 0 0 0 2px var(--pe-accent-soft);
+}
+.pe-select { appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 28px; }
+.pe-select-wrap { position: relative; }
+.pe-select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--pe-fg-faint);
+  border-bottom: 1.5px solid var(--pe-fg-faint);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+.pe-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.pe-label { font-size: var(--pe-fs-sm); font-weight: 600; line-height: 19px; color: var(--pe-fg-dim); letter-spacing: 0.01em; }
+.pe-hint { font-size: var(--pe-fs-sm); line-height: 19px; color: var(--pe-fg-faint); }
+.pe-row { display: flex; gap: 9px; align-items: center; min-width: 0; }
+.pe-row--wrap { flex-wrap: wrap; }
+.pe-spacer { margin-right: auto; }
+
+.pe-chiprow { display: flex; gap: 7px; flex-wrap: wrap; }
+.pe-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 13px;
+  border: 1px solid var(--pe-line);
+  background: var(--pe-flat);
+  color: var(--pe-fg-dim);
+  border-radius: 999px;
+  font-size: var(--pe-fs-sm);
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: var(--pe-e1);
+  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+.pe-chip:hover { background: var(--pe-flat-hi); color: var(--pe-fg); }
+.pe-chip[aria-pressed="true"] {
+  background: var(--pe-accent-soft);
+  border-color: var(--pe-accent-line);
+  color: var(--pe-accent);
+  font-weight: 650;
+  box-shadow: var(--pe-in-1);
+}
+
+.pe-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--pe-fs-sm);
+  line-height: 20px;
+  color: var(--pe-fg-dim);
+  cursor: pointer;
+}
+
+/* Checkboxes are drawn by hand instead of left to the UA: a native control
+   follows the *page's* color-scheme, so on a dark-scheme site it renders as a
+   near-black box that reads as broken against our dark surfaces. Unchecked is
+   always a light box; checked is the accent fill with a drawn tick. */
+.pe-root input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  position: relative;
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  border: 1px solid var(--pe-line-strong);
+  border-radius: 5px;
+  background: #ffffff;
+  box-shadow: var(--pe-in-1);
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.pe-root input[type="checkbox"]:hover {
+  border-color: var(--pe-accent-line);
+}
+.pe-root input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--pe-accent-soft);
+  outline-offset: 1px;
+}
+/* The tick is a 9x5 box with two borders, rotated -45deg. It is centred with
+   inset/margin auto so the rotation happens about the box centre, then nudged
+   up by 1px: a rotated L is visually bottom-heavy, so geometric centring alone
+   leaves the tick sitting low. */
+.pe-root input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 9px;
+  height: 5px;
+  border: solid var(--pe-accent-ink);
+  border-width: 0 0 2px 2px;
+  transform: translateY(-1px) rotate(-45deg) scale(0.4);
+  opacity: 0;
+  transition: opacity 0.1s ease, transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pe-root input[type="checkbox"]:checked {
+  background: var(--pe-accent);
+  border-color: var(--pe-accent);
+}
+.pe-root input[type="checkbox"]:checked::after {
+  opacity: 1;
+  transform: translateY(-1px) rotate(-45deg) scale(1);
+}
+
+/* ------------------------------------------------------------- modal ----- */
+
+/* The scrim scrolls, the panel does not: an integer top offset keeps every
+   edge on a whole pixel, and a scroll container with rounded corners would
+   otherwise clip through its own border and leave a seam. */
+.pe-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: block;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0;
+  background: rgba(7, 11, 17, 0.62);
+  animation: pe-fade 0.16s ease;
+}
+@keyframes pe-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.pe-modal__panel {
+  width: calc(100% - 40px);
+  max-width: 480px;
+  margin: 32px auto;
+  background: var(--pe-bg-solid);
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r-lg);
+  box-shadow: var(--pe-e3);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: pe-rise 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes pe-rise {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.pe-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--pe-fs-title);
+  line-height: 24px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+.pe-modal__title small { font-weight: 400; color: var(--pe-fg-faint); font-size: var(--pe-fs-sm); }
+.pe-modal__foot {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 30px;
+}
+.pe-section {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r);
+  background: var(--pe-flat);
+}
+.pe-bind {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r-sm);
+  background: var(--pe-sunken);
+  box-shadow: var(--pe-in-1);
+  font-size: var(--pe-fs-sm);
+  color: var(--pe-fg-dim);
+  min-width: 0;
+}
+.pe-bind strong {
+  color: var(--pe-fg);
+  font-weight: 600;
+  font-size: var(--pe-fs-sm);
+  max-width: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pe-bind span {
+  font-family: var(--pe-mono);
+  font-size: var(--pe-fs-micro);
+  color: var(--pe-fg-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.pe-error { color: var(--pe-danger); font-size: var(--pe-fs-sm); min-height: 19px; line-height: 19px; }
+
+/* -------------------------------------------------------------- pills ---- */
+
+.pe-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 19px;
+  border-radius: 999px;
+  padding: 0 9px;
+  font-size: var(--pe-fs-micro);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--pe-line);
+  background: var(--pe-flat);
+  color: var(--pe-fg-dim);
+  white-space: nowrap;
+}
+.pe-pill[data-status="pending"] { color: var(--pe-accent); border-color: var(--pe-accent-line); background: var(--pe-accent-soft); }
+.pe-pill[data-status="snoozed"] { color: var(--pe-info); border-color: rgba(155, 140, 240, 0.36); background: var(--pe-info-soft); }
+.pe-pill[data-status="delivered"] { color: var(--pe-ok); border-color: rgba(63, 184, 148, 0.36); background: var(--pe-ok-soft); }
+
+/* Clip with CSS instead of cutting strings in JS. */
+.pe-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.pe-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.pe-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pe-nums { font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------- toast ----- */
+
+.pe-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(6px);
+  background: var(--pe-bg-solid);
+  border: 1px solid var(--pe-line);
+  color: var(--pe-fg);
+  border-radius: 999px;
+  box-shadow: var(--pe-e2);
+  padding: 10px 19px;
+  font-size: var(--pe-fs-base);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+.pe-toast.pe-on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ------------------------------------------------------------- motion ---- */
+/*
+ * House rules for anything animated:
+ *   - one-shot keyframes only, never a lingering hover transform: a promoted
+ *     layer is what produced the seam artefacts we spent a round removing;
+ *   - short (140-260ms) and small (<= 8px, <= 1.04 scale);
+ *   - everything collapses under prefers-reduced-motion at the bottom of the
+ *     file.
+ */
+@keyframes pe-rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pe-fade-out {
+  to { opacity: 0; }
+}
+@keyframes pe-shrink-out {
+  to { opacity: 0; transform: translateY(4px) scale(0.995); }
+}
+@keyframes pe-pop {
+  0% { transform: scale(0.94); }
+  60% { transform: scale(1.03); }
+  100% { transform: none; }
+}
+@keyframes pe-nudge {
+  0%, 100% { transform: none; }
+  30% { transform: translateX(-2px); }
+  70% { transform: translateX(2px); }
+}
+
+/* A list row entering for the first time. */
+.pe-anim-in { animation: pe-rise-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+
+/* The card arrives as a sequence: header, then the message, then the actions. */
+.pe-card.pe-in .pe-card__head { animation: pe-rise-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.06s backwards; }
+.pe-card.pe-in .pe-card__body { animation: pe-rise-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards; }
+.pe-card.pe-in .pe-card__meta { animation: pe-rise-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) 0.14s backwards; }
+.pe-card.pe-in .pe-card__foot { animation: pe-rise-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) 0.18s backwards; }
+
+/* A reply lands in the thread. */
+.pe-reply { animation: pe-rise-in 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* The snooze picker replaces the footer row. */
+.pe-card__foot--snooze.pe-anim { animation: pe-rise-in 0.18s ease; }
+
+/* A chip lighting up gets a small pop. */
+.pe-chip.pe-anim { animation: pe-pop 0.2s ease; }
+
+/* The destructive confirm rings once, so the second click is unmistakable. */
+.pe-btn--danger-armed { animation: pe-nudge 0.28s ease; }
+
+/* Modals leave the way they arrived. */
+.pe-modal.pe-closing {
+  pointer-events: none;
+  animation: pe-fade-out 0.14s ease forwards;
+}
+.pe-modal.pe-closing .pe-modal__panel { animation: pe-shrink-out 0.14s ease forwards; }
+
+/* The floating button is the one hover affordance, and it moves the icon
+   rather than the bordered circle, so no layer is promoted on the frame. */
+.pe-fab svg { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.pe-fab:hover svg { transform: scale(1.12) rotate(-6deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pe-root *,
+  .pe-root *::before,
+  .pe-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+`;
+
+  var SHADOW_HOST = `
+:host {
+  all: initial;
+  position: static;
+}
+.pe-root { display: block; }
+`;
+
+  /**
+   * Extension pages (popup / manager) paint their <body> outside .pe-root, so
+   * they need the resolved theme on <html> to pick the matching page colour.
+   * Returns the resolved theme ('light' | 'dark').
+   */
+  function applyPageTheme(theme) {
+    var resolved = theme;
+    if (!resolved || resolved === 'auto') {
+      resolved =
+        g.matchMedia && g.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    var root = g.document && g.document.documentElement;
+    if (root) root.setAttribute('data-theme', resolved);
+    return resolved;
+  }
+
+  PE.styles = { CSS: CSS, shadowHost: SHADOW_HOST, applyPageTheme: applyPageTheme };
+})();

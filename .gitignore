@@ -1,0 +1,10 @@
+node_modules/
+.tmp-test/
+.npmcache/
+.local-ca/
+.tmp-chrome/
+npm-debug.log*
+.DS_Store
+*.zip
+*.crx
+*.xpi

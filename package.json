@@ -1,0 +1,18 @@
+{
+  "name": "pageecho",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PageEcho — 在任意网页给未来的自己留话，条件满足时在页面里滑出。本地存储，无账号、无服务器。",
+  "scripts": {
+    "test": "node tools/selftest.js && node tools/swtest.js && node tools/domtest.js && node tools/uitest.js",
+    "test:core": "node tools/selftest.js",
+    "test:sw": "node tools/swtest.js",
+    "test:dom": "node tools/domtest.js",
+    "test:ui": "node tools/uitest.js",
+    "fixture": "node tools/serve-fixture.js 8791",
+    "icons": "powershell -ExecutionPolicy Bypass -File tools/make-icons.ps1"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}
