@@ -1,11 +1,10 @@
 # PageEcho · 页面回声
 
-![GitHub stars](https://img.shields.io/github/stars/Chtrrrrrrr/PageEcho?style=flat-square&labelColor=0f1319&color=4d9fe0)
-![version](https://img.shields.io/badge/version-1.0.0-4d9fe0?style=flat-square&labelColor=0f1319)
-![manifest](https://img.shields.io/badge/manifest-v3-4d9fe0?style=flat-square&labelColor=0f1319)
-![platform](https://img.shields.io/badge/chrome%20%2F%20firefox-115%2B-3fb894?style=flat-square&labelColor=0f1319)
-![tests](https://img.shields.io/badge/tests-254%20passing-3fb894?style=flat-square&labelColor=0f1319)
-![privacy](https://img.shields.io/badge/data-local%20only-9b8cf0?style=flat-square&labelColor=0f1319)
+![GitHub stars](https://img.shields.io/github/stars/Chtrrrrrrr/PageEcho?style=social)
+![version](https://img.shields.io/badge/version-1.0.0-blue)
+![manifest](https://img.shields.io/badge/manifest-v3-blue)
+![platform](https://img.shields.io/badge/chrome%20%7C%20firefox-115%2B-brightgreen)
+![privacy](https://img.shields.io/badge/data-local%20only-lightgrey)
 
 > 在任意网页留下一句话。当你再次访问并满足条件时，它会在页面里滑出。
 
@@ -19,8 +18,6 @@
 - 三种绑定：仅此页面 / 整个站点 / 任意网页
 - 条件满足时卡片从页面边缘滑出，显示留言与「已经过去多久」
 - 可回一句、稍后再看、归档、删除；管理页支持筛选搜索、编辑、批量操作、JSON 导出导入
-
-无账号、无服务器，数据只存在浏览器本地。
 
 ## 适配与安装
 
