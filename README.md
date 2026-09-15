@@ -1,4 +1,4 @@
-![PageEcho](https://raw.githubusercontent.com/Chtrrrrrrr/PageEcho/main/assets/banner.png)
+<img src="assets/banner.png" alt="PageEcho · 页面回声" width="100%">
 
 # PageEcho · 页面回声
 
