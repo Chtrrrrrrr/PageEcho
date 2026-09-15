@@ -1,6 +1,11 @@
-<img src="assets/banner.png" alt="PageEcho · 页面回声" width="100%">
-
 # PageEcho · 页面回声
+
+![GitHub stars](https://img.shields.io/github/stars/Chtrrrrrrr/PageEcho?style=flat-square&labelColor=0f1319&color=4d9fe0)
+![version](https://img.shields.io/badge/version-1.0.0-4d9fe0?style=flat-square&labelColor=0f1319)
+![manifest](https://img.shields.io/badge/manifest-v3-4d9fe0?style=flat-square&labelColor=0f1319)
+![platform](https://img.shields.io/badge/chrome%20%2F%20firefox-115%2B-3fb894?style=flat-square&labelColor=0f1319)
+![tests](https://img.shields.io/badge/tests-254%20passing-3fb894?style=flat-square&labelColor=0f1319)
+![privacy](https://img.shields.io/badge/data-local%20only-9b8cf0?style=flat-square&labelColor=0f1319)
 
 > 在任意网页留下一句话。当你再次访问并满足条件时，它会在页面里滑出。
 
@@ -30,7 +35,6 @@ Chrome / Edge / Brave（Manifest V3）与 Firefox 115+。
 ```
 manifest.json          MV3 清单（同时声明 service_worker 与 background.scripts 以兼容 Firefox）
 icons/                 由 tools/make-icons.ps1 生成的图标
-assets/                README 用的横幅图
 src/
   core/
     ext.js             跨浏览器 API 适配（browser 的 Promise / chrome 的回调）
