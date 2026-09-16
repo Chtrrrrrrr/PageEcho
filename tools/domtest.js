@@ -345,6 +345,102 @@ function sendToPage(page, msg) {
     ok('panel hands off to the composer', !!page4.shadow().querySelector('.pe-modal textarea.pe-textarea'));
   }
 
+  /* ------------------------------------------------------------- stack -- */
+  console.log('\nStacking, countdown and page isolation');
+  const PAGE5 = 'https://example.com/stack';
+  await page4.win.PE.bg.withState((s) => {
+    s.settings.cardAutoDismissMs = -1; // content-length timing
+    ['第一条：这条短一点。', '第二条：这条稍微长一些，用来验证倒计时按内容长度变化。'].forEach((text) => {
+      const c = page4.win.PE.schema.createEcho({
+        text,
+        match: page4.win.PE.matcher.buildMatch(PAGE5, 'page', 'ignore'),
+        trigger: { type: 'next-visit' },
+        createdAt: clock.t
+      });
+      c.created = { statsKey: PAGE5, origin: 'https://example.com', visits: 0, siteVisits: 0, globalVisits: 0 };
+      s.echoes[c.id] = c;
+    });
+  });
+
+  const page5 = await openPage(PAGE5, clock);
+  await sleep(300);
+  const stacked = cards(page5);
+  ok('both due cards are shown at once', stacked.length === 2, stacked.length);
+  const stackEl = page5.shadow().querySelector('.pe-stack');
+  ok('cards live in one stack container', !!stackEl && stackEl.querySelectorAll('.pe-card').length === 2);
+  ok('every card is a direct child of the stack', stacked.every((c) => c.parentNode === stackEl));
+
+  // The page must not see interactions that happen inside our shadow root.
+  const page5Win = page5.win;
+  page5Win.__pageClicks = 0;
+  page5Win.document.addEventListener('click', () => {
+    page5Win.__pageClicks++;
+  });
+  const fab = page5.shadow().querySelector('.pe-fab');
+  fab.click();
+  await sleep(120);
+  ok('a click on our UI never reaches the page', page5Win.__pageClicks === 0, page5Win.__pageClicks);
+  const pageOwnBtn = page5Win.document.createElement('button');
+  page5Win.document.body.appendChild(pageOwnBtn);
+  pageOwnBtn.click();
+  ok('the page still receives its own clicks', page5Win.__pageClicks === 1, page5Win.__pageClicks);
+  sendToPage(page5, { type: 'PE_OPEN_PANEL' });
+  await sleep(120);
+  const panelModal = page5.shadow().querySelector('.pe-modal');
+  if (panelModal) panelModal.querySelector('.pe-modal__foot .pe-btn--ghost').click();
+  await sleep(250);
+
+  // Countdown rail: one per card, draining from full width.
+  const rail = stacked[0].querySelector('.pe-card__timer');
+  const fill = rail && rail.querySelector('.pe-card__timer-fill');
+  ok('each card carries a countdown rail', !!rail && !!fill);
+  ok('the rail is the last thing in the card', stacked[0].lastElementChild === rail);
+
+  // The countdown reads wall time, and this harness pins Date.now, so time has
+  // to be advanced explicitly before the animation frames can move the rail.
+  const scale0 = fill.style.transform;
+  clock.t += 6000;
+  await sleep(150);
+  const scale1 = fill.style.transform;
+  ok('the countdown drains as time passes (' + scale0 + ' -> ' + scale1 + ')', scale0 !== scale1);
+
+  // Hovering freezes it.
+  stacked[0].dispatchEvent(new page5Win.Event('mouseenter'));
+  const frozen = fill.style.transform;
+  clock.t += 6000;
+  await sleep(150);
+  ok('hovering pauses the countdown', fill.style.transform === frozen, [frozen, fill.style.transform]);
+
+  stacked[0].dispatchEvent(new page5Win.Event('mouseleave'));
+  clock.t += 2000;
+  await sleep(150);
+  ok('leaving resumes it', fill.style.transform !== frozen, fill.style.transform);
+
+  /* ------------------------------------------------- auto retract -- */
+  console.log('\nAuto retraction');
+  await page5.win.PE.bg.withState((s) => {
+    s.settings.cardAutoDismissMs = 900; // fixed, short, for the test
+  });
+  const PAGE6 = 'https://example.com/retract';
+  const seeded = await page5.win.PE.bg.withState((s) => {
+    const c = page5.win.PE.schema.createEcho({
+      text: '这条会在倒计时结束后自己收回去。',
+      match: page5.win.PE.matcher.buildMatch(PAGE6, 'page', 'ignore'),
+      trigger: { type: 'next-visit' },
+      createdAt: clock.t
+    });
+    c.created = { statsKey: PAGE6, origin: 'https://example.com', visits: 0, siteVisits: 0, globalVisits: 0 };
+    s.echoes[c.id] = c;
+    return c.id;
+  });
+  const page6 = await openPage(PAGE6, clock);
+  await sleep(300);
+  ok('the card is up before the countdown ends', cards(page6).length === 1, cards(page6).length);
+  clock.t += 1200; // past the 900ms the settings were set to
+  await sleep(500);
+  ok('the card retracts itself when the countdown ends', cards(page6).length === 0, cards(page6).length);
+  ok('the echo itself survives the retraction', !!(await page6.win.PE.bg.readState()).echoes[seeded]);
+
   console.log(
     '\n' + (failures ? '\u2717 ' + failures + ' / ' + checks + ' checks failed' : '\u2713 all ' + checks + ' checks passed') + '\n'
   );

@@ -212,14 +212,33 @@
 .pe-fab[data-side="left"] { left: 20px; }
 .pe-fab svg { width: 21px; height: 21px; display: block; }
 
-/* -------------------------------------------------------------- card ----- */
+/* -------------------------------------------------------------- cards ----- */
 
-.pe-card {
+/* Cards live in a bottom-anchored column so several can stack at once. The
+   container is the only fixed thing; each card is a normal flow child, which
+   is what lets a leaving card collapse its own space. */
+.pe-stack {
   position: fixed;
   bottom: 20px;
-  width: 364px;
-  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   max-height: calc(100vh - 40px);
+  max-width: calc(100vw - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.pe-stack::-webkit-scrollbar { width: 0; height: 0; }
+.pe-stack[data-side="right"] { right: 20px; align-items: flex-end; }
+.pe-stack[data-side="left"] { left: 20px; align-items: flex-start; }
+
+.pe-card {
+  position: relative;
+  width: 364px;
+  max-width: 100%;
+  max-height: calc(100vh - 60px);
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--pe-line);
@@ -230,23 +249,25 @@
   -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(130%);
   overflow: hidden;
   --pe-enter-x: 115%;
+  /* Shadowed on purpose: a leaving card folds its own height and gap away so
+     the cards below it slide up instead of jumping. */
+  transition: height 0.24s ease, margin-top 0.24s ease, opacity 0.24s ease;
 }
-.pe-card[data-side="right"] { right: 20px; }
-.pe-card[data-side="left"] { left: 20px; --pe-enter-x: -115%; }
+.pe-card[data-side="left"] { --pe-enter-x: -115%; }
 .pe-card.pe-in { animation: pe-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-.pe-card.pe-out { animation: pe-slide-out 0.2s ease-in forwards; }
+.pe-card.pe-out {
+  height: 0;
+  margin-top: 0;
+  opacity: 0;
+  pointer-events: none;
+}
 
 @keyframes pe-slide-in {
   from { transform: translateX(var(--pe-enter-x)) scale(0.99); opacity: 0; }
   to { transform: translateX(0) scale(1); opacity: 1; }
 }
-@keyframes pe-slide-out {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(var(--pe-enter-x)); opacity: 0; }
-}
 @media (prefers-reduced-motion: reduce) {
   .pe-card.pe-in { animation: pe-fade-in 0.18s ease; }
-  .pe-card.pe-out { animation: pe-fade-in 0.14s ease reverse forwards; }
   @keyframes pe-fade-in { from { opacity: 0; } to { opacity: 1; } }
 }
 
@@ -362,6 +383,21 @@
   gap: 7px;
   flex-wrap: wrap;
   justify-content: flex-start;
+}
+
+/* The countdown rail sits at the very bottom edge of the card and drains
+   left-to-right. Width is driven from JS so hover can pause it precisely. */
+.pe-card__timer {
+  height: 3px;
+  flex: none;
+  background: var(--pe-flat-hi);
+  overflow: hidden;
+}
+.pe-card__timer-fill {
+  height: 100%;
+  background: var(--pe-accent);
+  transform-origin: left center;
+  transform: scaleX(1);
 }
 
 /* ---------------------------------------------------------- controls ----- */
@@ -777,6 +813,11 @@
    rather than the bordered circle, so no layer is promoted on the frame. */
 .pe-fab svg { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .pe-fab:hover svg { transform: scale(1.12) rotate(-6deg); }
+
+/* Nothing of ours belongs on paper. */
+@media print {
+  .pe-root { display: none !important; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .pe-root *,

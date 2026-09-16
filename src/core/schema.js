@@ -9,7 +9,7 @@
   var PE = (g.PE = g.PE || {});
   var util = PE.util;
 
-  var SCHEMA_VERSION = 1;
+  var SCHEMA_VERSION = 2;
   var STORAGE_KEY = 'pe:state';
 
   var TRIGGER_TYPES = ['next-visit', 'delay', 'visit-count', 'dwell'];
@@ -23,7 +23,7 @@
     fab: true,
     fabSide: 'right',
     cardSide: 'right',
-    cardAutoDismissMs: 0, // 0 = 一直停留，直到手动收起
+    cardAutoDismissMs: -1, // <0 = 按内容长度自动倒计时, 0 = 不自动收起, >0 = 固定毫秒
     theme: 'auto', // auto | light | dark
     contextMenu: true,
     defaultScope: 'page',
@@ -57,7 +57,7 @@
     if (['right', 'left'].indexOf(s.fabSide) < 0) s.fabSide = 'right';
     if (['right', 'left'].indexOf(s.cardSide) < 0) s.cardSide = 'right';
     s.defaultDwellMinutes = util.clamp(s.defaultDwellMinutes, 1, 600);
-    s.cardAutoDismissMs = util.clamp(s.cardAutoDismissMs, 0, 600000);
+    s.cardAutoDismissMs = util.clamp(s.cardAutoDismissMs, -1, 600000);
     s.maxStatsPages = util.clamp(s.maxStatsPages, 50, 5000);
     s.fab = !!s.fab;
     s.contextMenu = !!s.contextMenu;
@@ -199,7 +199,14 @@
     var state = base;
     state.version = SCHEMA_VERSION;
     state.updatedAt = Number(raw.updatedAt) || 0;
-    state.settings = normalizeSettings(raw.settings);
+    // v1 stored cardAutoDismissMs: 0 as "never". v2 made content-length timing
+    // the default, so a v1 record drops the field and picks up the new default.
+    var settings = raw.settings;
+    if (Number(raw.version) < 2 && settings && typeof settings === 'object') {
+      settings = Object.assign({}, settings);
+      delete settings.cardAutoDismissMs;
+    }
+    state.settings = normalizeSettings(settings);
     // `capsules` is the pre-rename storage key; read it so data written by an
     // earlier version survives the terminology change, then rewrite as `echoes`.
     var stored = raw.echoes && typeof raw.echoes === 'object' ? raw.echoes : raw.capsules;
@@ -293,6 +300,18 @@
     return '';
   }
 
+  /**
+   * Resolve the card auto-retract setting into milliseconds.
+   *   <0  auto: derived from how much there is to read
+   *    0  never retract on its own
+   *   >0  fixed duration
+   */
+  function cardTimerMs(setting, chars) {
+    if (setting === 0) return 0;
+    if (setting > 0) return setting;
+    return util.readingTimeMs(chars);
+  }
+
   /** Human sentence summarising the whole echo (tooltips only). */
   function describe(echo) {
     var parts = [triggerLabel(echo.trigger), scopeLabel(echo.match)];
@@ -321,6 +340,7 @@
     statusLabel: statusLabel,
     computeSnooze: computeSnooze,
     snoozeLabel: snoozeLabel,
+    cardTimerMs: cardTimerMs,
     describe: describe
   };
 })();

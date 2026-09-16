@@ -136,6 +136,16 @@
     return d.getTime();
   }
 
+  /**
+   * How long a card should stay on screen before it retracts itself.
+   * Generous on purpose: 18s minimum, ~350ms per character of content, 2 min
+   * ceiling. The card also pauses while hovered, so erring long is safe.
+   */
+  function readingTimeMs(chars) {
+    var n = Math.max(0, Number(chars) || 0);
+    return clamp(18000 + n * 350, 18000, 120000);
+  }
+
   /** Next occurrence of 09:00 after `now` (used for "明天再说"). */
   function tomorrowMorning(now) {
     var d = new Date(now || Date.now());
@@ -161,6 +171,7 @@
     debounce: debounce,
     onIdle: onIdle,
     safeJson: safeJson,
+    readingTimeMs: readingTimeMs,
     endOfToday: endOfToday,
     tomorrowMorning: tomorrowMorning
   };

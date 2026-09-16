@@ -532,12 +532,16 @@
           { value: 'dark', label: '深色' },
           { value: 'light', label: '浅色' }
         ], s.theme, function (v) { set('theme', v); })),
-        rowControl('卡片自动收起', smallSelect([
-          { value: 0, label: '不自动收起' },
-          { value: 10000, label: '10 秒' },
-          { value: 20000, label: '20 秒' },
-          { value: 45000, label: '45 秒' }
-        ], s.cardAutoDismissMs, function (v) { set('cardAutoDismissMs', Number(v)); })),
+        rowControl(
+          '卡片停留时长',
+          smallSelect([
+            { value: -1, label: '按内容长度' },
+            { value: 20000, label: '固定 20 秒' },
+            { value: 45000, label: '固定 45 秒' },
+            { value: 90000, label: '固定 90 秒' },
+            { value: 0, label: '不自动收起' }
+          ], s.cardAutoDismissMs, function (v) { set('cardAutoDismissMs', Number(v)); })
+        ),
         rowControl('显示待触发徽标', checkbox(s.badge, function (v) { set('badge', v); }))
       ]),
       ui.h('div', { class: 'pe-section' }, [

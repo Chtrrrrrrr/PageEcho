@@ -292,6 +292,13 @@ function texts(nodes) {
   ok('popup merges schedule and actions into one row', /\.pp-item__footrow\s*\{[^}]*display:\s*flex/.test(popCss));
   ok('manager DOM uses the merged row', doc.querySelectorAll('.mg-card__footrow').length > 0);
 
+  // --- stacking + countdown + print ---------------------------------------
+  ok('cards stack in one fixed column', /\.pe-stack\s*\{[^}]*position:\s*fixed/.test(sharedSheet) && /\.pe-card\s*\{[^}]*position:\s*relative/.test(sharedSheet));
+  ok('the stack is bottom-anchored and side-aware', /\.pe-stack\[data-side="right"\]\s*\{[^}]*right:\s*20px/.test(sharedSheet) && /\.pe-stack\[data-side="left"\]\s*\{[^}]*left:\s*20px/.test(sharedSheet));
+  ok('a leaving card collapses its own space', /\.pe-card\.pe-out\s*\{[^}]*height:\s*0[\s\S]{0,120}?margin-top:\s*0/.test(sharedSheet) && /\.pe-card\s*\{[^}]*transition:\s*height/.test(sharedSheet));
+  ok('the countdown rail sits at the card bottom', /\.pe-card__timer\s*\{[^}]*height:\s*3px/.test(sharedSheet) && /\.pe-card__timer-fill\s*\{[^}]*transform-origin:\s*left/.test(sharedSheet));
+  ok('printing hides everything of ours', /@media print\s*\{\s*\.pe-root\s*\{\s*display:\s*none\s*!important/.test(sharedSheet));
+
   // --- render geometry: no fractional boxes, no compositing seams ---------
   ok('modal is top-anchored at an integer offset', /\.pe-modal\s*\{[^}]*display:\s*block/.test(sharedSheet) && /\.pe-modal__panel\s*\{[^}]*margin:\s*32px auto/.test(sharedSheet));
   ok('modal panel is not its own scroll container', !/\.pe-modal__panel\s*\{[^}]*overflow-y:\s*auto/.test(sharedSheet));
@@ -414,6 +421,8 @@ function texts(nodes) {
   modal = doc.querySelector('.pe-modal');
   ok('settings modal opened', !!modal);
   ok('settings has data section', modal.textContent.indexOf('导出 JSON 备份') > 0);
+  ok('card timer offers content-length timing', modal.textContent.indexOf('按内容长度') > 0);
+  ok('card timer still allows never retracting', modal.textContent.indexOf('不自动收起') > 0);
   const themeSelect = Array.from(modal.querySelectorAll('select')).find((s) =>
     Array.from(s.options).some((o) => o.value === 'chartreuse' || o.textContent === '深色')
   );

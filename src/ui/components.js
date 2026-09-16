@@ -164,7 +164,9 @@
     });
     options.forEach(function (o) {
       var opt = h('option', { value: o.value, text: o.label });
-      if (o.value === value) opt.selected = true;
+      // Loose on purpose: <select> values are always strings, but settings hold
+      // numbers (e.g. -1 / 20000), so a strict compare would never match.
+      if (String(o.value) === String(value)) opt.selected = true;
       sel.appendChild(opt);
     });
     return h('div', { class: 'pe-select-wrap' }, sel);
@@ -249,7 +251,7 @@
   /* ---------------------------------------------------------------- card -- */
 
   /**
-   * opts: { echo, now, side, onReply, onSnooze, onArchive, onDelete, onClose }
+   * opts: { echo, now, side, onReply, onSnooze, onArchive, onDelete, onDismissed }
    */
   function buildCard(opts) {
     var echo = opts.echo;
@@ -278,8 +280,8 @@
       title: '收起，下次访问仍会提醒',
       'aria-label': '收起',
       onclick: function () {
+        // onDismissed fires once the card has folded away, whatever the reason.
         dismiss();
-        if (opts.onClose) opts.onClose();
       }
     });
     close.appendChild(icon('close', 14));
@@ -469,15 +471,85 @@
     );
     card.appendChild(footSnooze);
 
+    /* ---- countdown rail ------------------------------------------------- */
+    var timerBar = h('div', { class: 'pe-card__timer' }, [h('div', { class: 'pe-card__timer-fill' })]);
+    var timerFill = timerBar.firstChild;
+    card.appendChild(timerBar);
+
+    var timerState = { ms: 0, deadline: 0, left: 0, frame: 0, paused: false, done: false };
+    var raf = g.requestAnimationFrame ? g.requestAnimationFrame.bind(g) : null;
+    var caf = g.cancelAnimationFrame ? g.cancelAnimationFrame.bind(g) : null;
+
+    function requestFrame(fn) {
+      return raf ? raf(fn) : setTimeout(fn, 80);
+    }
+    function cancelFrame(id) {
+      if (!id) return;
+      if (caf) caf(id);
+      else clearTimeout(id);
+    }
+    function paint(left) {
+      var ratio = timerState.ms ? left / timerState.ms : 0;
+      timerFill.style.transform = 'scaleX(' + Math.max(0, Math.min(1, ratio)).toFixed(4) + ')';
+    }
+    function frame() {
+      var left = timerState.deadline - Date.now();
+      if (left <= 0) {
+        paint(0);
+        dismiss();
+        return;
+      }
+      paint(left);
+      timerState.frame = requestFrame(frame);
+    }
+    function startCountdown(ms) {
+      if (!ms || ms <= 0) {
+        timerBar.style.display = 'none';
+        return;
+      }
+      timerState.ms = ms;
+      timerState.deadline = Date.now() + ms;
+      timerState.frame = requestFrame(frame);
+    }
+    function pauseCountdown() {
+      if (!timerState.ms || timerState.paused || timerState.done) return;
+      timerState.paused = true;
+      cancelFrame(timerState.frame);
+      timerState.left = Math.max(0, timerState.deadline - Date.now());
+    }
+    function resumeCountdown() {
+      if (!timerState.ms || !timerState.paused || timerState.done) return;
+      timerState.paused = false;
+      timerState.deadline = Date.now() + timerState.left;
+      timerState.frame = requestFrame(frame);
+    }
+    // Reading beats timing: the rail freezes while the pointer is on the card,
+    // and while the tab is in the background.
+    card.addEventListener('mouseenter', pauseCountdown);
+    card.addEventListener('mouseleave', resumeCountdown);
+    function onVisibility() {
+      if (document.hidden) pauseCountdown();
+      else resumeCountdown();
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+
     function dismiss() {
+      if (timerState.done) return;
+      timerState.done = true;
+      cancelFrame(timerState.frame);
+      document.removeEventListener('visibilitychange', onVisibility);
+      // Freeze the current height so the collapse can be animated, then let the
+      // cards below slide up into the freed space.
+      card.style.height = (card.offsetHeight || 0) + 'px';
+      void card.offsetWidth;
       card.classList.remove('pe-in');
       card.classList.add('pe-out');
       setTimeout(function () {
         if (card.parentNode) card.parentNode.removeChild(card);
-      }, 240);
+        if (opts.onDismissed) opts.onDismissed();
+      }, 260);
     }
 
-    var timer = null;
     return {
       el: card,
       enter: function () {
@@ -486,14 +558,10 @@
       refreshTime: function () {
         agoEl.textContent = util.humanElapsed(echo.createdAt, Date.now());
       },
-      autoDismiss: function (ms) {
-        if (!ms) return;
-        timer = setTimeout(dismiss, ms);
-      },
-      dismiss: dismiss,
-      cancelAuto: function () {
-        if (timer) clearTimeout(timer);
-      }
+      startCountdown: startCountdown,
+      pauseCountdown: pauseCountdown,
+      resumeCountdown: resumeCountdown,
+      dismiss: dismiss
     };
   }
 

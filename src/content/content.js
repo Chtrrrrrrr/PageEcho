@@ -35,6 +35,7 @@
   var layer = null;
   var fab = null;
   var toastHost = null;
+  var stackEl = null;
 
   var state = null;
   var ctx = null; // { url, statsKey, origin, visits, siteVisits, globalVisits }
@@ -42,8 +43,8 @@
 
   var sessionShown = Object.create(null); // ids shown during this page view
   var queue = [];
-  var showing = null;
-  var showingCard = null;
+  var activeCards = []; // { id, card } — stacked, newest nearest the corner
+  var MAX_VISIBLE = 3;
 
   var dwellAccum = 0;
   var dwellStart = document.visibilityState === 'visible' ? Date.now() : 0;
@@ -87,6 +88,7 @@
 
     shadow = host.attachShadow({ mode: 'open' });
     mountStyles(shadow);
+    guardEvents(shadow);
 
     root = ui.h('div', { class: 'pe-root', 'data-theme': 'auto' });
     shadow.appendChild(root);
@@ -95,8 +97,40 @@
     root.appendChild(layer);
     toastHost = layer;
 
+    stackEl = ui.h('div', { class: 'pe-stack', 'data-side': 'right' });
+    layer.appendChild(stackEl);
+
     buildFab();
     renderSettings();
+  }
+
+  /**
+   * Keep our interactions to ourselves: an event raised inside the shadow root
+   * would otherwise cross the boundary (retargeted to the host) and reach the
+   * page's own click/key handlers — enough for an analytics script to record
+   * that this extension is in use. The page keeps every event it raises itself.
+   */
+  function guardEvents(target) {
+    [
+      'click',
+      'dblclick',
+      'auxclick',
+      'contextmenu',
+      'pointerdown',
+      'pointerup',
+      'mousedown',
+      'mouseup',
+      'keydown',
+      'keyup',
+      'keypress',
+      'touchstart',
+      'touchend',
+      'wheel'
+    ].forEach(function (type) {
+      target.addEventListener(type, function (e) {
+        e.stopPropagation();
+      });
+    });
   }
 
   function buildFab() {
@@ -120,6 +154,7 @@
       fab.setAttribute('data-side', settings.fabSide === 'left' ? 'left' : 'right');
     }
     if (root) root.setAttribute('data-theme', settings.theme || 'auto');
+    if (stackEl) stackEl.setAttribute('data-side', settings.cardSide === 'left' ? 'left' : 'right');
   }
 
   /* ------------------------------------------------------------- delivery -- */
@@ -135,21 +170,33 @@
     pump();
   }
 
+  /** Fill the stack up to MAX_VISIBLE; the rest wait for a slot. */
   function pump() {
-    if (showing || !queue.length) return;
-    var echo = queue.shift();
-    if (sessionShown[echo.id]) return pump();
-    show(echo);
+    while (queue.length && activeCards.length < MAX_VISIBLE) {
+      var echo = queue.shift();
+      if (sessionShown[echo.id]) continue;
+      show(echo);
+    }
   }
 
   function show(echo) {
     sessionShown[echo.id] = true;
-    showing = echo.id;
     cardEnter(echo);
+  }
+
+  function forgetCard(id) {
+    activeCards = activeCards.filter(function (entry) {
+      return entry.id !== id;
+    });
+    pump();
   }
 
   function cardEnter(echo) {
     var fresh = findEcho(echo.id) || echo;
+    var chars = fresh.text.length;
+    (fresh.replies || []).forEach(function (r) {
+      chars += String(r.text || '').length;
+    });
     var card = ui.buildCard({
       echo: fresh,
       now: Date.now(),
@@ -172,16 +219,15 @@
           toast('已删除。');
         });
       },
-      onClose: function () {
-        showing = null;
-        showingCard = null;
-        pump();
+      onDismissed: function () {
+        forgetCard(fresh.id);
       }
     });
-    layer.appendChild(card.el);
-    showingCard = card;
+    stackEl.appendChild(card.el);
+    activeCards.push({ id: fresh.id, card: card });
     card.enter();
-    card.autoDismiss(settings.cardAutoDismissMs);
+    // Longer messages get longer on screen; hovering freezes the rail.
+    card.startCountdown(schema.cardTimerMs(settings.cardAutoDismissMs, chars));
 
     // Mark the delivery so a one-shot echo does not fire again.
     store.op({ op: 'delivered', ids: [fresh.id] }).catch(function () {});
@@ -285,6 +331,10 @@
 
   function resetPageView() {
     sessionShown = Object.create(null);
+    // Cards still on screen stay claimed, so the new URL cannot re-deliver them.
+    activeCards.forEach(function (entry) {
+      sessionShown[entry.id] = true;
+    });
     queue = [];
     dwellTimers = Object.create(null);
     dwellAccum = 0;
@@ -305,7 +355,8 @@
         root = null;
         layer = null;
         fab = null;
-        showingCard = null;
+        stackEl = null;
+        activeCards = []; // the old card nodes died with the old tree
         setupDom();
       }
       if (location.href !== lastUrl) {
@@ -445,7 +496,9 @@
     }, DWELL_FLUSH_MS));
     timers.push(
       setInterval(function () {
-        if (showingCard) showingCard.refreshTime();
+        activeCards.forEach(function (entry) {
+          entry.card.refreshTime();
+        });
       }, 30000)
     );
     scheduleRecheck(RECHECK_MS);
