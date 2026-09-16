@@ -292,7 +292,24 @@ function texts(nodes) {
   ok('popup merges schedule and actions into one row', /\.pp-item__footrow\s*\{[^}]*display:\s*flex/.test(popCss));
   ok('manager DOM uses the merged row', doc.querySelectorAll('.mg-card__footrow').length > 0);
 
-  // --- stacking + countdown + print ---------------------------------------
+  // --- glass, applied consistently ----------------------------------------
+  // The card flashed on load: the batch carries an animation-delay, and
+  // without fill-mode backwards the card paints fully visible during it, then
+  // snaps to the keyframe start.
+  ok('the card entrance fills backwards, so nothing flashes before the slide', /\.pe-card\.pe-in\s*\{[^}]*animation:\s*pe-slide-in[^;]*backwards/.test(sharedSheet));
+  ok('the modal entrance fills backwards too', /\.pe-modal__panel\s*\{[^}]*animation:\s*pe-rise[^;]*backwards/.test(sharedSheet));
+  ok('glass tokens exist for every theme', (sharedSheet.match(/--pe-glass:/g) || []).length === 3 && (sharedSheet.match(/--pe-tint-strong:/g) || []).length === 3);
+
+  const sheenRule = (sharedSheet.match(/\.pe-card,[\s\S]*?background-image:\s*var\(--pe-sheen\);\s*\}/) || [''])[0];
+  ok(
+    'one sheen rule covers every floating panel',
+    ['pe-modal__panel', 'pe-fab', 'pe-toast', 'mg-panel', 'mg-card', 'pp-page', 'pp-item'].every((c) => sheenRule.indexOf(c) >= 0),
+    sheenRule.slice(0, 80)
+  );
+  ok('the modal panel is glass, not a flat plate', /\.pe-modal__panel\s*\{[^}]*background:\s*var\(--pe-tint-strong\)[\s\S]{0,220}?backdrop-filter:\s*blur\(var\(--pe-blur\)\)/.test(sharedSheet));
+  ok('every floating panel shares one blur radius', !/blur\((?!var\(--pe-blur\))\d/.test(sharedSheet));
+  ok('nested panels stay unblurred', !/\.pe-section\s*\{[^}]*backdrop-filter/.test(sharedSheet) && !/\.pe-reply\s*\{[^}]*backdrop-filter/.test(sharedSheet));
+  ok('page panels stay translucent', !/\.mg-card\s*\{[^}]*background:\s*#/.test(mgrCss) && !/\.pp-item\s*\{[^}]*background:\s*#/.test(popCss));
   ok('cards stack in one fixed column', /\.pe-stack\s*\{[^}]*position:\s*fixed/.test(sharedSheet) && /\.pe-card\s*\{[^}]*position:\s*relative/.test(sharedSheet));
   ok('the stack is bottom-anchored and side-aware', /\.pe-stack\[data-side="right"\]\s*\{[^}]*right:\s*20px/.test(sharedSheet) && /\.pe-stack\[data-side="left"\]\s*\{[^}]*left:\s*20px/.test(sharedSheet));
   ok('a leaving card collapses its own space', /\.pe-card\.pe-out\s*\{[^}]*height:\s*0[\s\S]{0,140}?margin-top:\s*0/.test(sharedSheet) && /\.pe-card\s*\{[^}]*transition:\s*height/.test(sharedSheet));

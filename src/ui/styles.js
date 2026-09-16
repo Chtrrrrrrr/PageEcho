@@ -38,28 +38,37 @@
   --pe-danger-tint: rgba(226, 106, 134, 0.3);
   --pe-danger-line: rgba(226, 106, 134, 0.62);
 
-  /* ---- surfaces: flat fills, frosted overlays ---------------------- */
-  --pe-bg: rgba(15, 19, 26, 0.82);
-  --pe-bg-solid: #14181f;
-  --pe-flat: rgba(255, 255, 255, 0.045);
-  --pe-flat-hi: rgba(255, 255, 255, 0.08);
-  --pe-sunken: rgba(0, 0, 0, 0.26);
+  /* ---- glass: every surface is translucent, one light model ---------- */
+  --pe-glass: rgba(255, 255, 255, 0.075); /* raised control */
+  --pe-glass-hi: rgba(255, 255, 255, 0.13); /* hover / selected */
+  --pe-glass-lo: rgba(255, 255, 255, 0.038); /* quiet nested panel */
+  --pe-tint: rgba(18, 22, 31, 0.55); /* floating panel body */
+  --pe-tint-strong: rgba(15, 19, 27, 0.7); /* modal: more text, less see-through */
+  --pe-veil: rgba(5, 8, 13, 0.55);
+  --pe-bg: var(--pe-tint);
+  --pe-bg-solid: #151922;
+  --pe-flat: var(--pe-glass);
+  --pe-flat-hi: var(--pe-glass-hi);
+  --pe-sunken: rgba(0, 0, 0, 0.2);
 
-  --pe-fg: #e7ecf4;
-  --pe-fg-dim: #98a5b8;
-  --pe-fg-faint: #71809a;
-  --pe-line: rgba(255, 255, 255, 0.09);
-  --pe-line-strong: rgba(255, 255, 255, 0.17);
+  --pe-fg: #eaf0f8;
+  --pe-fg-dim: #9dabc0;
+  --pe-fg-faint: #7686a0;
+  --pe-line: rgba(255, 255, 255, 0.11);
+  --pe-line-strong: rgba(255, 255, 255, 0.22);
 
-  /* ---- depth: one tight shadow, one crisp highlight ---------------- */
-  --pe-e1: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --pe-e2: 0 1px 2px rgba(0, 0, 0, 0.24), 0 6px 16px rgba(0, 0, 0, 0.22);
-  --pe-e3: 0 2px 4px rgba(0, 0, 0, 0.26), 0 18px 44px rgba(0, 0, 0, 0.38);
-  --pe-in-1: inset 0 1px 2px rgba(0, 0, 0, 0.3);
-  --pe-in-2: inset 0 2px 5px rgba(0, 0, 0, 0.34);
-  --pe-hi: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  /* ---- depth: soft wide shadows + one crisp specular rim ------------ */
+  --pe-e1: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --pe-e2: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --pe-e3: 0 20px 56px rgba(0, 0, 0, 0.48);
+  --pe-in-1: inset 0 1px 2px rgba(0, 0, 0, 0.22);
+  --pe-in-2: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+  --pe-hi: inset 0 1px 0 rgba(255, 255, 255, 0.11);
 
-  --pe-blur: 16px;
+  --pe-blur: 26px;
+  --pe-sat: 175%;
+  /* one specular sheen, reused by every glass panel */
+  --pe-sheen: linear-gradient(170deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 46%);
 
   /* ---- type scale: readable first, whole-pixel line boxes ----------- */
   --pe-fs-micro: 12px;
@@ -108,24 +117,31 @@
   --pe-danger-tint: rgba(192, 64, 92, 0.16);
   --pe-danger-line: rgba(192, 64, 92, 0.5);
 
-  --pe-bg: rgba(249, 251, 253, 0.86);
+  --pe-glass: rgba(255, 255, 255, 0.55);
+  --pe-glass-hi: rgba(255, 255, 255, 0.78);
+  --pe-glass-lo: rgba(255, 255, 255, 0.34);
+  --pe-tint: rgba(255, 255, 255, 0.6);
+  --pe-tint-strong: rgba(255, 255, 255, 0.78);
+  --pe-veil: rgba(12, 18, 28, 0.3);
+  --pe-bg: var(--pe-tint);
   --pe-bg-solid: #f8fafc;
-  --pe-flat: rgba(16, 24, 40, 0.035);
-  --pe-flat-hi: rgba(16, 24, 40, 0.07);
-  --pe-sunken: rgba(16, 24, 40, 0.05);
+  --pe-flat: var(--pe-glass);
+  --pe-flat-hi: var(--pe-glass-hi);
+  --pe-sunken: rgba(255, 255, 255, 0.5);
 
-  --pe-fg: #141a24;
-  --pe-fg-dim: #515d70;
-  --pe-fg-faint: #7c8a9c;
-  --pe-line: rgba(16, 24, 40, 0.12);
-  --pe-line-strong: rgba(16, 24, 40, 0.22);
+  --pe-fg: #131a24;
+  --pe-fg-dim: #4e5b70;
+  --pe-fg-faint: #78879b;
+  --pe-line: rgba(16, 24, 40, 0.13);
+  --pe-line-strong: rgba(16, 24, 40, 0.24);
 
   --pe-e1: 0 1px 2px rgba(16, 24, 40, 0.1);
-  --pe-e2: 0 1px 2px rgba(16, 24, 40, 0.1), 0 6px 16px rgba(16, 24, 40, 0.1);
-  --pe-e3: 0 2px 4px rgba(16, 24, 40, 0.12), 0 18px 40px rgba(16, 24, 40, 0.16);
-  --pe-in-1: inset 0 1px 2px rgba(16, 24, 40, 0.1);
-  --pe-in-2: inset 0 2px 5px rgba(16, 24, 40, 0.14);
+  --pe-e2: 0 8px 24px rgba(16, 24, 40, 0.14);
+  --pe-e3: 0 20px 48px rgba(16, 24, 40, 0.22);
+  --pe-in-1: inset 0 1px 2px rgba(16, 24, 40, 0.08);
+  --pe-in-2: inset 0 2px 6px rgba(16, 24, 40, 0.12);
   --pe-hi: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --pe-sheen: linear-gradient(170deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 52%);
 }
 
 @media (prefers-color-scheme: light) {
@@ -146,24 +162,31 @@
     --pe-danger-tint: rgba(192, 64, 92, 0.16);
     --pe-danger-line: rgba(192, 64, 92, 0.5);
 
-    --pe-bg: rgba(249, 251, 253, 0.86);
+    --pe-glass: rgba(255, 255, 255, 0.55);
+    --pe-glass-hi: rgba(255, 255, 255, 0.78);
+    --pe-glass-lo: rgba(255, 255, 255, 0.34);
+    --pe-tint: rgba(255, 255, 255, 0.6);
+    --pe-tint-strong: rgba(255, 255, 255, 0.78);
+    --pe-veil: rgba(12, 18, 28, 0.3);
+    --pe-bg: var(--pe-tint);
     --pe-bg-solid: #f8fafc;
-    --pe-flat: rgba(16, 24, 40, 0.035);
-    --pe-flat-hi: rgba(16, 24, 40, 0.07);
-    --pe-sunken: rgba(16, 24, 40, 0.05);
+    --pe-flat: var(--pe-glass);
+    --pe-flat-hi: var(--pe-glass-hi);
+    --pe-sunken: rgba(255, 255, 255, 0.5);
 
-    --pe-fg: #141a24;
-    --pe-fg-dim: #515d70;
-    --pe-fg-faint: #7c8a9c;
-    --pe-line: rgba(16, 24, 40, 0.12);
-    --pe-line-strong: rgba(16, 24, 40, 0.22);
+    --pe-fg: #131a24;
+    --pe-fg-dim: #4e5b70;
+    --pe-fg-faint: #78879b;
+    --pe-line: rgba(16, 24, 40, 0.13);
+    --pe-line-strong: rgba(16, 24, 40, 0.24);
 
     --pe-e1: 0 1px 2px rgba(16, 24, 40, 0.1);
-    --pe-e2: 0 1px 2px rgba(16, 24, 40, 0.1), 0 6px 16px rgba(16, 24, 40, 0.1);
-    --pe-e3: 0 2px 4px rgba(16, 24, 40, 0.12), 0 18px 40px rgba(16, 24, 40, 0.16);
-    --pe-in-1: inset 0 1px 2px rgba(16, 24, 40, 0.1);
-    --pe-in-2: inset 0 2px 5px rgba(16, 24, 40, 0.14);
+    --pe-e2: 0 8px 24px rgba(16, 24, 40, 0.14);
+    --pe-e3: 0 20px 48px rgba(16, 24, 40, 0.22);
+    --pe-in-1: inset 0 1px 2px rgba(16, 24, 40, 0.08);
+    --pe-in-2: inset 0 2px 6px rgba(16, 24, 40, 0.12);
     --pe-hi: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    --pe-sheen: linear-gradient(170deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 52%);
   }
 }
 
@@ -174,6 +197,20 @@
 .pe-root * { box-sizing: border-box; }
 .pe-root p { margin: 0; }
 .pe-root button { font: inherit; color: inherit; }
+
+/* One glass recipe, applied everywhere a panel floats — in-page cards, modals,
+   the popup and the manager page alike. Keeping it in a single rule is what
+   stops the surfaces from drifting into different styles. */
+.pe-card,
+.pe-modal__panel,
+.pe-fab,
+.pe-toast,
+.mg-panel,
+.mg-card,
+.pp-page,
+.pp-item {
+  background-image: var(--pe-sheen);
+}
 
 /* ------------------------------------------------------- layer + fab ----- */
 
@@ -196,13 +233,13 @@
   justify-content: center;
   border: 1px solid var(--pe-line);
   border-radius: 50%;
-  background: var(--pe-bg);
+  background: var(--pe-tint);
   color: var(--pe-accent);
   box-shadow: var(--pe-e2), var(--pe-hi);
-  backdrop-filter: blur(var(--pe-blur)) saturate(130%);
-  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(130%);
+  backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
+  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
   cursor: pointer;
-  opacity: 0.72;
+  opacity: 0.8;
   pointer-events: auto;
   transition: opacity 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -239,10 +276,10 @@
   flex-direction: column;
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r-lg);
-  background: var(--pe-bg);
-  box-shadow: var(--pe-e3);
-  backdrop-filter: blur(var(--pe-blur)) saturate(130%);
-  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(130%);
+  background: var(--pe-tint);
+  box-shadow: var(--pe-e3), var(--pe-hi);
+  backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
+  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
   overflow: hidden;
   --pe-enter-x: 115%;
   /* Shadowed on purpose: a leaving card folds its own height and gap away so
@@ -253,7 +290,10 @@
 /* Two or more at once share the viewport rather than running off the top. */
 .pe-stack > .pe-card:not(:only-child) { max-height: calc((100vh - 80px) / 2); }
 .pe-card[data-side="left"] { --pe-enter-x: -115%; }
-.pe-card.pe-in { animation: pe-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+/* animation-fill-mode backwards is load-bearing here: the batch carries an
+   animation-delay, and without it the card paints fully visible during the
+   delay, then snaps back to the keyframe start — a visible flash. */
+.pe-card.pe-in { animation: pe-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 /* Leaves the same way it arrived: sideways, while its space collapses. */
 .pe-card.pe-out {
   height: 0;
@@ -268,7 +308,7 @@
   to { transform: translateX(0) scale(1); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pe-card.pe-in { animation: pe-fade-in 0.18s ease; }
+  .pe-card.pe-in { animation: pe-fade-in 0.18s ease backwards; }
   @keyframes pe-fade-in { from { opacity: 0; } to { opacity: 1; } }
 }
 
@@ -614,7 +654,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0;
-  background: rgba(7, 11, 17, 0.62);
+  background: var(--pe-veil);
   animation: pe-fade 0.16s ease;
 }
 @keyframes pe-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -623,15 +663,17 @@
   width: calc(100% - 40px);
   max-width: 480px;
   margin: 32px auto;
-  background: var(--pe-bg-solid);
+  background: var(--pe-tint-strong);
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r-lg);
-  box-shadow: var(--pe-e3);
+  box-shadow: var(--pe-e3), var(--pe-hi);
+  backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
+  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  animation: pe-rise 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: pe-rise 0.2s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 @keyframes pe-rise {
   from { transform: translateY(10px); opacity: 0; }
@@ -661,7 +703,7 @@
   padding: 14px;
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r);
-  background: var(--pe-flat);
+  background: var(--pe-glass-lo);
 }
 .pe-bind {
   display: flex;
@@ -744,11 +786,13 @@
   left: 50%;
   bottom: 28px;
   transform: translateX(-50%) translateY(6px);
-  background: var(--pe-bg-solid);
+  background: var(--pe-tint-strong);
   border: 1px solid var(--pe-line);
   color: var(--pe-fg);
   border-radius: 999px;
-  box-shadow: var(--pe-e2);
+  box-shadow: var(--pe-e2), var(--pe-hi);
+  backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
+  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
   padding: 10px 19px;
   font-size: var(--pe-fs-base);
   opacity: 0;
