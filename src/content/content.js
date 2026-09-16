@@ -44,7 +44,7 @@
   var sessionShown = Object.create(null); // ids shown during this page view
   var queue = [];
   var activeCards = []; // { id, card } — stacked, newest nearest the corner
-  var MAX_VISIBLE = 3;
+  var STAGGER_MS = 130; // gap between cards popping in, bottom one first
 
   var dwellAccum = 0;
   var dwellStart = document.visibilityState === 'visible' ? Date.now() : 0;
@@ -170,18 +170,21 @@
     pump();
   }
 
-  /** Fill the stack up to MAX_VISIBLE; the rest wait for a slot. */
+  /** Fill the stack up to the configured limit, then animate what was added.
+   *  The batch is staggered from the bottom up: the card nearest the corner
+   *  lands first and the ones above follow. */
   function pump() {
-    while (queue.length && activeCards.length < MAX_VISIBLE) {
+    var added = [];
+    var limit = util.clamp(settings.maxCards, 1, 5);
+    while (queue.length && activeCards.length < limit) {
       var echo = queue.shift();
       if (sessionShown[echo.id]) continue;
-      show(echo);
+      sessionShown[echo.id] = true;
+      added.push(cardEnter(echo));
     }
-  }
-
-  function show(echo) {
-    sessionShown[echo.id] = true;
-    cardEnter(echo);
+    for (var i = added.length - 1; i >= 0; i--) {
+      added[i].enter((added.length - 1 - i) * STAGGER_MS);
+    }
   }
 
   function forgetCard(id) {
@@ -197,8 +200,7 @@
     (fresh.replies || []).forEach(function (r) {
       chars += String(r.text || '').length;
     });
-    var card = ui.buildCard({
-      echo: fresh,
+    var card = ui.buildCard({      echo: fresh,
       now: Date.now(),
       side: settings.cardSide,
       onReply: function (text) {
@@ -225,12 +227,12 @@
     });
     stackEl.appendChild(card.el);
     activeCards.push({ id: fresh.id, card: card });
-    card.enter();
-    // Longer messages get longer on screen; hovering freezes the rail.
+    // Longer content — message plus replies — gets a longer countdown.
     card.startCountdown(schema.cardTimerMs(settings.cardAutoDismissMs, chars));
 
     // Mark the delivery so a one-shot echo does not fire again.
     store.op({ op: 'delivered', ids: [fresh.id] }).catch(function () {});
+    return card;
   }
 
   function findEcho(id) {
@@ -506,10 +508,45 @@
 
   /* ----------------------------------------------------------------- boot -- */
 
+  /**
+   * Sites the user has told us to stay out of. Matching is on the hostname and
+   * a leading dot means "this domain and its subdomains".
+   */
+  function hostBlocked(hosts, hostname) {
+    if (!hosts || !hosts.length) return false;
+    var host = String(hostname || '').toLowerCase().replace(/^www\./, '');
+    for (var i = 0; i < hosts.length; i++) {
+      var rule = String(hosts[i] || '').trim().toLowerCase();
+      if (!rule) continue;
+      if (rule.charAt(0) === '.') {
+        var bare = rule.slice(1);
+        if (host === bare || host.slice(-(bare.length + 1)) === '.' + bare) return true;
+      } else if (host === rule || host.slice(-(rule.length + 1)) === '.' + rule) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function boot() {
     if (!/^https?:|^file:/.test(location.protocol)) return;
     if (document.contentType && document.contentType.indexOf('html') < 0) return;
 
+    // Check the blocklist before touching the page at all: on an excluded site
+    // we do not even create the host element.
+    store
+      .load()
+      .then(function (fresh) {
+        settings = fresh.settings;
+        if (hostBlocked(settings.disabledHosts, location.hostname)) return;
+        run();
+      })
+      .catch(function () {
+        run();
+      });
+  }
+
+  function run() {
     setupDom();
     listen();
     startTimers();

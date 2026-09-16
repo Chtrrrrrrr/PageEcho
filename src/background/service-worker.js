@@ -168,23 +168,36 @@ if (typeof importScripts === 'function') {
     }
   ];
 
+  /** Rebuild from scratch, honouring the right-click-menu setting. */
   function buildMenus() {
     if (!api.contextMenus) return Promise.resolve();
     var menus = api.contextMenus;
     var removeAll = ext.promisify(menus.removeAll, menus);
     var create = ext.promisify(menus.create, menus);
-    var chain = removeAll ? removeAll().catch(function () {}) : Promise.resolve();
-    return chain.then(function () {
-      return Promise.all(
-        MENU_ITEMS.map(function (item) {
-          return create
-            ? create(item).catch(function () {
-                /* duplicate id or missing permission */
-              })
-            : Promise.resolve();
-        })
-      );
-    });
+    var enabled = true;
+    return PE.bg
+      .readState()
+      .then(function (state) {
+        enabled = !!(state.settings && state.settings.contextMenu);
+      })
+      .catch(function () {
+        /* default to showing them */
+      })
+      .then(function () {
+        return removeAll ? removeAll().catch(function () {}) : Promise.resolve();
+      })
+      .then(function () {
+        if (!enabled) return null;
+        return Promise.all(
+          MENU_ITEMS.map(function (item) {
+            return create
+              ? create(item).catch(function () {
+                  /* duplicate id or missing permission */
+                })
+              : Promise.resolve();
+          })
+        );
+      });
   }
 
   if (api.contextMenus) {
@@ -224,7 +237,10 @@ if (typeof importScripts === 'function') {
           if (sender && sender.tab && sender.tab.id != null) {
             refreshBadgeForTab(sender.tab.id, sender.tab.url || '');
           }
-          if (opName === 'settings') refreshActiveBadge();
+          if (opName === 'settings') {
+            refreshActiveBadge();
+            buildMenus();
+          }
         }
         return res;
       });

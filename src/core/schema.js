@@ -23,9 +23,11 @@
     fab: true,
     fabSide: 'right',
     cardSide: 'right',
+    maxCards: 3, // how many cards may stack at once (1-5)
     cardAutoDismissMs: -1, // <0 = 按内容长度自动倒计时, 0 = 不自动收起, >0 = 固定毫秒
     theme: 'auto', // auto | light | dark
     contextMenu: true,
+    disabledHosts: [], // hostnames to stay out of, ".example.com" covers subdomains
     defaultScope: 'page',
     defaultQueryMode: 'ignore',
     defaultDwellMinutes: 10,
@@ -58,7 +60,18 @@
     if (['right', 'left'].indexOf(s.cardSide) < 0) s.cardSide = 'right';
     s.defaultDwellMinutes = util.clamp(s.defaultDwellMinutes, 1, 600);
     s.cardAutoDismissMs = util.clamp(s.cardAutoDismissMs, -1, 600000);
+    s.maxCards = Math.round(util.clamp(s.maxCards, 1, 5));
     s.maxStatsPages = util.clamp(s.maxStatsPages, 50, 5000);
+    s.disabledHosts = Array.isArray(s.disabledHosts)
+      ? s.disabledHosts
+          .map(function (h) {
+            return String(h || '').trim().toLowerCase();
+          })
+          .filter(function (h) {
+            return h && h !== '.';
+          })
+          .slice(0, 200)
+      : [];
     s.fab = !!s.fab;
     s.contextMenu = !!s.contextMenu;
     s.badge = !!s.badge;

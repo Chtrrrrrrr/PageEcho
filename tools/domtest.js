@@ -400,7 +400,7 @@ function sendToPage(page, msg) {
   // to be advanced explicitly before the animation frames can move the rail.
   const scale0 = fill.style.transform;
   clock.t += 6000;
-  await sleep(150);
+  await sleep(260);
   const scale1 = fill.style.transform;
   ok('the countdown drains as time passes (' + scale0 + ' -> ' + scale1 + ')', scale0 !== scale1);
 
@@ -408,13 +408,30 @@ function sendToPage(page, msg) {
   stacked[0].dispatchEvent(new page5Win.Event('mouseenter'));
   const frozen = fill.style.transform;
   clock.t += 6000;
-  await sleep(150);
+  await sleep(260);
   ok('hovering pauses the countdown', fill.style.transform === frozen, [frozen, fill.style.transform]);
 
   stacked[0].dispatchEvent(new page5Win.Event('mouseleave'));
-  clock.t += 2000;
-  await sleep(150);
+  clock.t += 2800;
+  await sleep(260);
   ok('leaving resumes it', fill.style.transform !== frozen, fill.style.transform);
+
+  // The rail warms from accent to danger as it runs out.
+  const warn = fill.style.background || '';
+  const rgb = (warn.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/) || []).slice(1).map(Number);
+  ok('the rail turns red when time runs low (' + warn + ')', rgb.length === 3, warn);
+  ok('the warning colour leans red', rgb.length === 3 && rgb[0] > rgb[2], rgb);
+
+  // Longer content — message plus replies — buys a longer stay.
+  const rt = page5.win.PE.util.readingTimeMs;
+  ok('a longer message gets a longer countdown (' + rt(10) + ' < ' + rt(120) + ')', rt(120) > rt(10));
+  ok('the countdown stays brisk (8-40s)', rt(0) === 8000 && rt(500) === 40000, [rt(0), rt(500)]);
+  ok('replies count toward the countdown', rt(10 + 200) > rt(10));
+
+  // Stacked cards enter one after another, the one nearest the corner first.
+  const delays = stacked.map((c) => parseInt(c.style.animationDelay || '0', 10));
+  ok('the batch is staggered, not simultaneous', new Set(delays).size > 1, delays);
+  ok('the card nearest the corner animates first', delays[delays.length - 1] === 0, delays);
 
   /* ------------------------------------------------- auto retract -- */
   console.log('\nAuto retraction');
@@ -440,6 +457,21 @@ function sendToPage(page, msg) {
   await sleep(500);
   ok('the card retracts itself when the countdown ends', cards(page6).length === 0, cards(page6).length);
   ok('the echo itself survives the retraction', !!(await page6.win.PE.bg.readState()).echoes[seeded]);
+
+  /* ------------------------------------------------- host blocklist -- */
+  console.log('\nExcluded sites');
+  await page6.win.PE.bg.withState((s) => {
+    s.settings.disabledHosts = ['.example.com'];
+    s.settings.cardAutoDismissMs = -1;
+  });
+  const page7 = await openPage('https://sub.example.com/quiet', clock);
+  await sleep(300);
+  const hostOn7 = page7.win.document.getElementById('pageecho-host');
+  ok('an excluded site gets no host element at all', !hostOn7, hostOn7 ? 'host present' : 'absent');
+
+  const page8 = await openPage('https://other.test/ok', clock);
+  await sleep(300);
+  ok('other sites still work', !!page8.shadow() && !!page8.shadow().querySelector('.pe-fab'));
 
   console.log(
     '\n' + (failures ? '\u2717 ' + failures + ' / ' + checks + ' checks failed' : '\u2713 all ' + checks + ' checks passed') + '\n'

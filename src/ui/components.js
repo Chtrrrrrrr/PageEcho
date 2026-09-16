@@ -348,6 +348,8 @@
           replyInput.value = '';
           replyErr.textContent = '';
           replyBox.style.display = 'none';
+          // What you just wrote is more to read: keep the card up for it.
+          extendCountdown(text.length * util.READING_PER_CHAR);
         },
         function (e) {
           replyErr.textContent = (e && e.message) || '保存失败';
@@ -480,6 +482,10 @@
     var raf = g.requestAnimationFrame ? g.requestAnimationFrame.bind(g) : null;
     var caf = g.cancelAnimationFrame ? g.cancelAnimationFrame.bind(g) : null;
 
+    // Below this fraction of the original duration the rail turns from the
+    // accent colour to the danger colour, so "about to vanish" is visible.
+    var WARN_FROM = 0.45;
+
     function requestFrame(fn) {
       return raf ? raf(fn) : setTimeout(fn, 80);
     }
@@ -488,9 +494,46 @@
       if (caf) caf(id);
       else clearTimeout(id);
     }
+    function cssColor(name, fallback) {
+      try {
+        var v = getComputedStyle(card).getPropertyValue(name).trim();
+        return v || fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+    function toRgb(color) {
+      var hex = String(color).trim();
+      var m = hex.match(/^#([0-9a-f]{6})$/i);
+      if (m) {
+        var n = parseInt(m[1], 16);
+        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+      }
+      m = hex.match(/rgba?\(([^)]+)\)/i);
+      if (m) {
+        var parts = m[1].split(',').map(function (s) {
+          return parseFloat(s);
+        });
+        return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
+      }
+      return null;
+    }
+    var calmRgb = toRgb(cssColor('--pe-accent', '#4d9fe0')) || [77, 159, 224];
+    var warnRgb = toRgb(cssColor('--pe-danger', '#e26a86')) || [226, 106, 134];
+
     function paint(left) {
       var ratio = timerState.ms ? left / timerState.ms : 0;
-      timerFill.style.transform = 'scaleX(' + Math.max(0, Math.min(1, ratio)).toFixed(4) + ')';
+      ratio = Math.max(0, Math.min(1, ratio));
+      timerFill.style.transform = 'scaleX(' + ratio.toFixed(4) + ')';
+      var heat = ratio >= WARN_FROM ? 0 : (WARN_FROM - ratio) / WARN_FROM;
+      if (heat <= 0) {
+        timerFill.style.background = '';
+      } else {
+        var r = Math.round(calmRgb[0] + (warnRgb[0] - calmRgb[0]) * heat);
+        var gg = Math.round(calmRgb[1] + (warnRgb[1] - calmRgb[1]) * heat);
+        var b = Math.round(calmRgb[2] + (warnRgb[2] - calmRgb[2]) * heat);
+        timerFill.style.background = 'rgb(' + r + ',' + gg + ',' + b + ')';
+      }
     }
     function frame() {
       var left = timerState.deadline - Date.now();
@@ -510,6 +553,14 @@
       timerState.ms = ms;
       timerState.deadline = Date.now() + ms;
       timerState.frame = requestFrame(frame);
+    }
+    /** Content added while the card is up (a reply) buys it more time. */
+    function extendCountdown(extraMs) {
+      if (!timerState.ms || timerState.done || !extraMs) return;
+      timerState.ms += extraMs;
+      if (timerState.paused) timerState.left += extraMs;
+      else timerState.deadline += extraMs;
+      paint(timerState.paused ? timerState.left : timerState.deadline - Date.now());
     }
     function pauseCountdown() {
       if (!timerState.ms || timerState.paused || timerState.done) return;
@@ -552,13 +603,16 @@
 
     return {
       el: card,
-      enter: function () {
+      /** `delay` staggers a batch of cards so they pop in one after another. */
+      enter: function (delay) {
+        if (delay) card.style.animationDelay = delay + 'ms';
         card.classList.add('pe-in');
       },
       refreshTime: function () {
         agoEl.textContent = util.humanElapsed(echo.createdAt, Date.now());
       },
       startCountdown: startCountdown,
+      extendCountdown: extendCountdown,
       pauseCountdown: pauseCountdown,
       resumeCountdown: resumeCountdown,
       dismiss: dismiss

@@ -138,12 +138,17 @@
 
   /**
    * How long a card should stay on screen before it retracts itself.
-   * Generous on purpose: 18s minimum, ~350ms per character of content, 2 min
-   * ceiling. The card also pauses while hovered, so erring long is safe.
+   * Scales with everything there is to read (message plus replies), and stays
+   * brisk: 8s minimum, ~130ms per character, 40s ceiling. Hovering pauses it,
+   * so erring short costs the reader nothing.
    */
+  var READING_BASE = 8000;
+  var READING_PER_CHAR = 130;
+  var READING_MAX = 40000;
+
   function readingTimeMs(chars) {
     var n = Math.max(0, Number(chars) || 0);
-    return clamp(18000 + n * 350, 18000, 120000);
+    return clamp(READING_BASE + n * READING_PER_CHAR, READING_BASE, READING_MAX);
   }
 
   /** Next occurrence of 09:00 after `now` (used for "明天再说"). */
@@ -172,6 +177,9 @@
     onIdle: onIdle,
     safeJson: safeJson,
     readingTimeMs: readingTimeMs,
+    READING_BASE: READING_BASE,
+    READING_PER_CHAR: READING_PER_CHAR,
+    READING_MAX: READING_MAX,
     endOfToday: endOfToday,
     tomorrowMorning: tomorrowMorning
   };

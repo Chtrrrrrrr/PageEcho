@@ -456,6 +456,25 @@ const PAGE_CLEAN = 'https://example.com/article?id=7';
   const snoozed = makeEcho({ trigger: { type: 'next-visit' }, snoozeOnVisit: true });
   eq('snooze label stays short', schema.snoozeLabel(snoozed, nowTs), '下次访问时提醒');
 
+  /* ------------------------------------------------------------- settings -- */
+  console.log('\nSettings');
+  const norm = schema.normalizeSettings({
+    maxCards: 99,
+    disabledHosts: [' Example.com ', '', '.', 'a.test', '  '],
+    cardAutoDismissMs: -5,
+    contextMenu: false
+  });
+  eq('maxCards is clamped to the stack limit', norm.maxCards, 5);
+  eq('the host list is cleaned and lowercased', norm.disabledHosts, ['example.com', 'a.test']);
+  eq('the timer sentinel survives clamping', norm.cardAutoDismissMs, -1);
+  eq('the context menu setting round-trips', norm.contextMenu, false);
+  eq(
+    'a non-array host list falls back to empty',
+    schema.normalizeSettings({ disabledHosts: 'example.com' }).disabledHosts,
+    []
+  );
+  eq('defaults are sane', [schema.DEFAULT_SETTINGS.maxCards, schema.DEFAULT_SETTINGS.disabledHosts.length], [3, 0]);
+
   /* ------------------------------------------------------------ robustness -- */
   console.log('\nRobustness');
 

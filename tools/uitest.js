@@ -423,6 +423,11 @@ function texts(nodes) {
   ok('settings has data section', modal.textContent.indexOf('导出 JSON 备份') > 0);
   ok('card timer offers content-length timing', modal.textContent.indexOf('按内容长度') > 0);
   ok('card timer still allows never retracting', modal.textContent.indexOf('不自动收起') > 0);
+  ok('stack size is configurable', modal.textContent.indexOf('同时显示卡片数') > 0);
+  ok('the floating button can be switched off', modal.textContent.indexOf('显示悬浮按钮') > 0);
+  ok('the context menu can be switched off', modal.textContent.indexOf('右键菜单') > 0);
+  ok('sites can be excluded', modal.textContent.indexOf('不在这些站点运行') > 0 && !!modal.querySelector('textarea'));
+  ok('the exclusion hint explains the syntax', modal.textContent.indexOf('.example.com') > 0);
   const themeSelect = Array.from(modal.querySelectorAll('select')).find((s) =>
     Array.from(s.options).some((o) => o.value === 'chartreuse' || o.textContent === '深色')
   );

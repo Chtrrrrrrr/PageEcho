@@ -515,6 +515,23 @@
       return wrap;
     };
 
+    var hostList = ui.h('textarea', {
+      class: 'pe-textarea',
+      rows: '3',
+      placeholder: 'example.com\n.bank.example',
+      style: { minHeight: '72px', fontFamily: 'var(--pe-mono)', fontSize: 'var(--pe-fs-sm)' }
+    });
+    hostList.value = s.disabledHosts.join('\n');
+    hostList.addEventListener('input', util.debounce(function () {
+      set(
+        'disabledHosts',
+        hostList.value
+          .split(/[\s,]+/)
+          .map(function (h) { return h.trim(); })
+          .filter(Boolean)
+      );
+    }, 500));
+
     var body = [
       ui.h('div', { class: 'pe-section' }, [
         ui.h('span', { class: 'pe-label', text: '页面内界面' }),
@@ -527,11 +544,13 @@
           { value: 'right', label: '从右侧滑出' },
           { value: 'left', label: '从左侧滑出' }
         ], s.cardSide, function (v) { set('cardSide', v); })),
-        rowControl('主题', smallSelect([
-          { value: 'auto', label: '跟随系统' },
-          { value: 'dark', label: '深色' },
-          { value: 'light', label: '浅色' }
-        ], s.theme, function (v) { set('theme', v); })),
+        rowControl('同时显示卡片数', smallSelect([
+          { value: 1, label: '1 张' },
+          { value: 2, label: '2 张' },
+          { value: 3, label: '3 张' },
+          { value: 4, label: '4 张' },
+          { value: 5, label: '5 张' }
+        ], s.maxCards, function (v) { set('maxCards', Number(v)); })),
         rowControl(
           '卡片停留时长',
           smallSelect([
@@ -542,7 +561,24 @@
             { value: 0, label: '不自动收起' }
           ], s.cardAutoDismissMs, function (v) { set('cardAutoDismissMs', Number(v)); })
         ),
+        rowControl('主题', smallSelect([
+          { value: 'auto', label: '跟随系统' },
+          { value: 'dark', label: '深色' },
+          { value: 'light', label: '浅色' }
+        ], s.theme, function (v) { set('theme', v); })),
         rowControl('显示待触发徽标', checkbox(s.badge, function (v) { set('badge', v); }))
+      ]),
+      ui.h('div', { class: 'pe-section' }, [
+        ui.h('span', { class: 'pe-label', text: '浏览器集成' }),
+        rowControl('右键菜单', checkbox(s.contextMenu, function (v) { set('contextMenu', v); })),
+        ui.h('div', { class: 'pe-field' }, [
+          ui.h('span', { class: 'pe-label', text: '不在这些站点运行' }),
+          hostList,
+          ui.h('span', {
+            class: 'pe-hint',
+            text: '每行一个域名；写 .example.com 会连带它的子域名。这些站点不会注入悬浮按钮或卡片。'
+          })
+        ])
       ]),
       ui.h('div', { class: 'pe-section' }, [
         ui.h('span', { class: 'pe-label', text: '新建默认值' }),
