@@ -396,6 +396,13 @@ function sendToPage(page, msg) {
   ok('each card carries a countdown rail', !!rail && !!fill);
   ok('the rail is the last thing in the card', stacked[0].lastElementChild === rail);
 
+  // A fresh rail is calm; it only warns once past the halfway mark.
+  ok(
+    'both rails start calm',
+    stacked.every((c) => !c.querySelector('.pe-card__timer-fill').classList.contains('pe-soon'))
+  );
+  ok('no interpolated colour is written inline', !fill.style.background, fill.style.background);
+
   // The countdown reads wall time, and this harness pins Date.now, so time has
   // to be advanced explicitly before the animation frames can move the rail.
   const scale0 = fill.style.transform;
@@ -416,11 +423,9 @@ function sendToPage(page, msg) {
   await sleep(260);
   ok('leaving resumes it', fill.style.transform !== frozen, fill.style.transform);
 
-  // The rail warms from accent to danger as it runs out.
-  const warn = fill.style.background || '';
-  const rgb = (warn.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/) || []).slice(1).map(Number);
-  ok('the rail turns red when time runs low (' + warn + ')', rgb.length === 3, warn);
-  ok('the warning colour leans red', rgb.length === 3 && rgb[0] > rgb[2], rgb);
+  // It is a class switch rather than a colour interpolation: blending blue and
+  // rose in sRGB passes through a muddy purple.
+  ok('the rail warns once past halfway (' + fill.style.transform + ')', fill.classList.contains('pe-soon'));
 
   // Longer content — message plus replies — buys a longer stay.
   const rt = page5.win.PE.util.readingTimeMs;

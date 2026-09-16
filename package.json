@@ -1,6 +1,6 @@
 {
   "name": "pageecho",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "PageEcho — 在任意网页给未来的自己留话，条件满足时在页面里滑出。本地存储，无账号、无服务器。",
   "scripts": {

@@ -482,9 +482,10 @@
     var raf = g.requestAnimationFrame ? g.requestAnimationFrame.bind(g) : null;
     var caf = g.cancelAnimationFrame ? g.cancelAnimationFrame.bind(g) : null;
 
-    // Below this fraction of the original duration the rail turns from the
-    // accent colour to the danger colour, so "about to vanish" is visible.
-    var WARN_FROM = 0.45;
+    // At half the time left the rail crossfades from the accent colour to the
+    // danger colour. No blue->red interpolation: blending those two hues in
+    // sRGB goes through a muddy purple.
+    var WARN_FROM = 0.5;
 
     function requestFrame(fn) {
       return raf ? raf(fn) : setTimeout(fn, 80);
@@ -494,46 +495,11 @@
       if (caf) caf(id);
       else clearTimeout(id);
     }
-    function cssColor(name, fallback) {
-      try {
-        var v = getComputedStyle(card).getPropertyValue(name).trim();
-        return v || fallback;
-      } catch (e) {
-        return fallback;
-      }
-    }
-    function toRgb(color) {
-      var hex = String(color).trim();
-      var m = hex.match(/^#([0-9a-f]{6})$/i);
-      if (m) {
-        var n = parseInt(m[1], 16);
-        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-      }
-      m = hex.match(/rgba?\(([^)]+)\)/i);
-      if (m) {
-        var parts = m[1].split(',').map(function (s) {
-          return parseFloat(s);
-        });
-        return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
-      }
-      return null;
-    }
-    var calmRgb = toRgb(cssColor('--pe-accent', '#4d9fe0')) || [77, 159, 224];
-    var warnRgb = toRgb(cssColor('--pe-danger', '#e26a86')) || [226, 106, 134];
-
     function paint(left) {
       var ratio = timerState.ms ? left / timerState.ms : 0;
       ratio = Math.max(0, Math.min(1, ratio));
       timerFill.style.transform = 'scaleX(' + ratio.toFixed(4) + ')';
-      var heat = ratio >= WARN_FROM ? 0 : (WARN_FROM - ratio) / WARN_FROM;
-      if (heat <= 0) {
-        timerFill.style.background = '';
-      } else {
-        var r = Math.round(calmRgb[0] + (warnRgb[0] - calmRgb[0]) * heat);
-        var gg = Math.round(calmRgb[1] + (warnRgb[1] - calmRgb[1]) * heat);
-        var b = Math.round(calmRgb[2] + (warnRgb[2] - calmRgb[2]) * heat);
-        timerFill.style.background = 'rgb(' + r + ',' + gg + ',' + b + ')';
-      }
+      timerFill.classList.toggle('pe-soon', ratio <= WARN_FROM);
     }
     function frame() {
       var left = timerState.deadline - Date.now();
@@ -595,10 +561,11 @@
       void card.offsetWidth;
       card.classList.remove('pe-in');
       card.classList.add('pe-out');
+      // Long enough for both the slide and the height collapse to finish.
       setTimeout(function () {
         if (card.parentNode) card.parentNode.removeChild(card);
         if (opts.onDismissed) opts.onDismissed();
-      }, 260);
+      }, 300);
     }
 
     return {

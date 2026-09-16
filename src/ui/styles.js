@@ -214,30 +214,26 @@
 
 /* -------------------------------------------------------------- cards ----- */
 
-/* Cards live in a bottom-anchored column so several can stack at once. The
-   container is the only fixed thing; each card is a normal flow child, which
-   is what lets a leaving card collapse its own space. */
+/* Cards live in a bottom-anchored column so several can stack at once.
+   Deliberately NOT a scroll container: the entrance and exit animations slide
+   cards horizontally, and a transformed child counts as scrollable overflow —
+   inside an overflow container that makes the whole stack jitter left/right.
+   The bottom edge stays pinned, so no justify-content is needed. */
 .pe-stack {
   position: fixed;
   bottom: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  max-height: calc(100vh - 40px);
-  max-width: calc(100vw - 32px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
+  align-items: flex-end;
 }
-.pe-stack::-webkit-scrollbar { width: 0; height: 0; }
-.pe-stack[data-side="right"] { right: 20px; align-items: flex-end; }
+.pe-stack[data-side="right"] { right: 20px; }
 .pe-stack[data-side="left"] { left: 20px; align-items: flex-start; }
 
 .pe-card {
   position: relative;
   width: 364px;
-  max-width: 100%;
-  max-height: calc(100vh - 60px);
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 56px);
   margin-top: 12px;
   display: flex;
   flex-direction: column;
@@ -251,14 +247,19 @@
   --pe-enter-x: 115%;
   /* Shadowed on purpose: a leaving card folds its own height and gap away so
      the cards below it slide up instead of jumping. */
-  transition: height 0.24s ease, margin-top 0.24s ease, opacity 0.24s ease;
+  transition: height 0.24s ease, margin-top 0.24s ease, opacity 0.24s ease,
+    transform 0.28s cubic-bezier(0.4, 0, 1, 1);
 }
+/* Two or more at once share the viewport rather than running off the top. */
+.pe-stack > .pe-card:not(:only-child) { max-height: calc((100vh - 80px) / 2); }
 .pe-card[data-side="left"] { --pe-enter-x: -115%; }
 .pe-card.pe-in { animation: pe-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+/* Leaves the same way it arrived: sideways, while its space collapses. */
 .pe-card.pe-out {
   height: 0;
   margin-top: 0;
   opacity: 0;
+  transform: translateX(var(--pe-enter-x));
   pointer-events: none;
 }
 
@@ -386,7 +387,10 @@
 }
 
 /* The countdown rail sits at the very bottom edge of the card and drains
-   left-to-right. Width is driven from JS so hover can pause it precisely. */
+   left-to-right. Width is driven from JS so hover can pause it precisely.
+   It does not interpolate blue -> red: blending two hues in sRGB passes
+   through a muddy purple. It crossfades to the danger colour at the halfway
+   mark instead. */
 .pe-card__timer {
   height: 3px;
   flex: none;
@@ -398,7 +402,9 @@
   background: var(--pe-accent);
   transform-origin: left center;
   transform: scaleX(1);
+  transition: background-color 0.45s ease;
 }
+.pe-card__timer-fill.pe-soon { background: var(--pe-danger); }
 
 /* ---------------------------------------------------------- controls ----- */
 

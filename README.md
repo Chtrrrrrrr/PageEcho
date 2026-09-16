@@ -58,7 +58,7 @@ tools/                 图标生成与四个测试套件（core / service worker
 
 ```bash
 npm install     # 仅为测试安装 jsdom
-npm test        # core / service worker / 端到端 / 管理页与弹窗，共 294 项检查
+npm test        # core / service worker / 端到端 / 管理页与弹窗，共 299 项检查
 npm run icons   # 重新生成 icons/*.png
 ```
 

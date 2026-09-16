@@ -200,7 +200,8 @@
     (fresh.replies || []).forEach(function (r) {
       chars += String(r.text || '').length;
     });
-    var card = ui.buildCard({      echo: fresh,
+    var card = ui.buildCard({
+      echo: fresh,
       now: Date.now(),
       side: settings.cardSide,
       onReply: function (text) {

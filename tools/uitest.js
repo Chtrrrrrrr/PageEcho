@@ -295,7 +295,11 @@ function texts(nodes) {
   // --- stacking + countdown + print ---------------------------------------
   ok('cards stack in one fixed column', /\.pe-stack\s*\{[^}]*position:\s*fixed/.test(sharedSheet) && /\.pe-card\s*\{[^}]*position:\s*relative/.test(sharedSheet));
   ok('the stack is bottom-anchored and side-aware', /\.pe-stack\[data-side="right"\]\s*\{[^}]*right:\s*20px/.test(sharedSheet) && /\.pe-stack\[data-side="left"\]\s*\{[^}]*left:\s*20px/.test(sharedSheet));
-  ok('a leaving card collapses its own space', /\.pe-card\.pe-out\s*\{[^}]*height:\s*0[\s\S]{0,120}?margin-top:\s*0/.test(sharedSheet) && /\.pe-card\s*\{[^}]*transition:\s*height/.test(sharedSheet));
+  ok('a leaving card collapses its own space', /\.pe-card\.pe-out\s*\{[^}]*height:\s*0[\s\S]{0,140}?margin-top:\s*0/.test(sharedSheet) && /\.pe-card\s*\{[^}]*transition:\s*height/.test(sharedSheet));
+  ok('a leaving card also slides out sideways', /\.pe-card\.pe-out\s*\{[^}]*transform:\s*translateX\(var\(--pe-enter-x\)\)/.test(sharedSheet) && /\.pe-card\s*\{[^}]*transition:[^;]*transform/.test(sharedSheet));
+  ok('the stack is not a scroll container', !/\.pe-stack\s*\{[^}]*overflow/.test((sharedSheet.match(/\.pe-stack\s*\{[\s\S]*?\}/) || [''])[0]) && !/\.pe-stack\s*\{[^}]*max-height/.test((sharedSheet.match(/\.pe-stack\s*\{[\s\S]*?\}/) || [''])[0]));
+  ok('stacked cards share the viewport height', /\.pe-stack > \.pe-card:not\(:only-child\)\s*\{[^}]*max-height/.test(sharedSheet));
+  ok('the rail crossfades instead of interpolating hue', /\.pe-card__timer-fill\.pe-soon\s*\{\s*background:\s*var\(--pe-danger\)/.test(sharedSheet) && /\.pe-card__timer-fill\s*\{[^}]*transition:\s*background-color/.test(sharedSheet));
   ok('the countdown rail sits at the card bottom', /\.pe-card__timer\s*\{[^}]*height:\s*3px/.test(sharedSheet) && /\.pe-card__timer-fill\s*\{[^}]*transform-origin:\s*left/.test(sharedSheet));
   ok('printing hides everything of ours', /@media print\s*\{\s*\.pe-root\s*\{\s*display:\s*none\s*!important/.test(sharedSheet));
 
