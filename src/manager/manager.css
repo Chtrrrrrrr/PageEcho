@@ -59,10 +59,20 @@ html[data-theme="light"] body {
 /* ------------------------------------------------------------------ head -- */
 
 .mg-head {
+  position: sticky;
+  top: 12px;
+  z-index: 6;
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  padding: 12px 16px;
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r);
+  background-color: var(--pe-tint);
+  box-shadow: var(--pe-e2), var(--pe-hi);
+  backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
+  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
 }
 
 .mg-brand {
@@ -120,7 +130,10 @@ html[data-theme="light"] body {
 .mg-panel {
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r);
-  background: var(--pe-flat);
+  background-color: var(--pe-tint);
+  box-shadow: var(--pe-e2), var(--pe-hi);
+  backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
+  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
   padding: 11px;
   display: flex;
   flex-direction: column;
@@ -207,6 +220,11 @@ html[data-theme="light"] body {
   line-height: 18px;
   color: var(--pe-fg-faint);
   min-height: 30px;
+  padding: 8px 11px;
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r);
+  background-color: var(--pe-glass-lo);
+  box-shadow: var(--pe-hi);
 }
 .mg-toolbar .pe-select-wrap {
   width: 146px;
@@ -236,15 +254,17 @@ html[data-theme="light"] body {
 .mg-card {
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r);
-  background: var(--pe-flat);
+  background-color: var(--pe-tint);
+  box-shadow: var(--pe-e1), var(--pe-hi);
   padding: 15px;
   display: flex;
   gap: 12px;
-  transition: border-color 0.14s ease, background 0.14s ease;
+  transition: border-color 0.14s ease, background-color 0.14s ease, box-shadow 0.14s ease;
 }
 .mg-card:hover {
   border-color: var(--pe-line-strong);
-  background: var(--pe-flat-hi);
+  background-color: var(--pe-glass);
+  box-shadow: var(--pe-e2), var(--pe-hi);
 }
 .mg-card[data-selected="true"] {
   border-color: var(--pe-accent-line);
@@ -372,7 +392,9 @@ html[data-theme="light"] body {
 }
 
 .mg-empty {
-  border: 1px dashed var(--pe-line);
+  border: 1px dashed var(--pe-line-strong);
+  background-color: var(--pe-tint);
+  box-shadow: var(--pe-e1), var(--pe-hi);
   border-radius: var(--pe-r);
   padding: 36px 20px;
   text-align: center;

@@ -310,6 +310,13 @@ function texts(nodes) {
   ok('every floating panel shares one blur radius', !/blur\((?!var\(--pe-blur\))\d/.test(sharedSheet));
   ok('nested panels stay unblurred', !/\.pe-section\s*\{[^}]*backdrop-filter/.test(sharedSheet) && !/\.pe-reply\s*\{[^}]*backdrop-filter/.test(sharedSheet));
   ok('page panels stay translucent', !/\.mg-card\s*\{[^}]*background:\s*#/.test(mgrCss) && !/\.pp-item\s*\{[^}]*background:\s*#/.test(popCss));
+  // The manager and popup used the subtle control fill while in-page cards used
+  // the panel tint, which read as two different styles. They now share one.
+  ok('manager panels use the panel tint', /\.mg-card\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(mgrCss) && /\.mg-panel\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(mgrCss));
+  ok('manager rows carry the glass rim', /\.mg-card\s*\{[^}]*box-shadow:[^;]*var\(--pe-hi\)/.test(mgrCss));
+  ok('the manager header is a glass bar', /\.mg-head\s*\{[^}]*backdrop-filter:\s*blur\(var\(--pe-blur\)\)/.test(mgrCss) && /\.mg-popup-fake|\.mg-head\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(mgrCss));
+  ok('popup panels match the same recipe', /\.pp-item\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(popCss) && /\.pp-page\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(popCss) && /\.pp-head\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(popCss));
+  ok('no page surface is left opaque', !/\.(mg|pp)-[a-z0-9-]+\s*\{[^}]*\bbackground(-color)?:\s*#/.test(mgrCss + popCss));
   ok('cards stack in one fixed column', /\.pe-stack\s*\{[^}]*position:\s*fixed/.test(sharedSheet) && /\.pe-card\s*\{[^}]*position:\s*relative/.test(sharedSheet));
   ok('the stack is bottom-anchored and side-aware', /\.pe-stack\[data-side="right"\]\s*\{[^}]*right:\s*20px/.test(sharedSheet) && /\.pe-stack\[data-side="left"\]\s*\{[^}]*left:\s*20px/.test(sharedSheet));
   ok('a leaving card collapses its own space', /\.pe-card\.pe-out\s*\{[^}]*height:\s*0[\s\S]{0,140}?margin-top:\s*0/.test(sharedSheet) && /\.pe-card\s*\{[^}]*transition:\s*height/.test(sharedSheet));

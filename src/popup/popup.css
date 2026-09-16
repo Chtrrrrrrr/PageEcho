@@ -69,6 +69,11 @@ html[data-theme="light"] {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 9px 11px;
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r-sm);
+  background-color: var(--pe-tint);
+  box-shadow: var(--pe-e1), var(--pe-hi);
 }
 .pp-brand {
   display: flex;
@@ -94,7 +99,8 @@ html[data-theme="light"] {
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r-sm);
   padding: 11px 13px;
-  background: var(--pe-flat);
+  background-color: var(--pe-tint);
+  box-shadow: var(--pe-e1), var(--pe-hi);
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -150,7 +156,8 @@ html[data-theme="light"] {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: var(--pe-flat);
+  background-color: var(--pe-tint);
+  box-shadow: var(--pe-e1), var(--pe-hi);
 }
 .pp-item:hover {
   border-color: var(--pe-line-strong);
@@ -231,6 +238,8 @@ html[data-theme="light"] {
 }
 
 .pp-empty {
+  background-color: var(--pe-tint);
+  box-shadow: var(--pe-e1), var(--pe-hi);
   padding: 16px 6px;
   text-align: center;
   font-size: var(--pe-fs-sm);
@@ -247,8 +256,11 @@ html[data-theme="light"] {
   font-size: var(--pe-fs-sm);
   line-height: 18px;
   color: var(--pe-fg-faint);
-  border-top: 1px solid var(--pe-line);
-  padding-top: 9px;
+  padding: 9px 11px;
+  border: 1px solid var(--pe-line);
+  border-radius: var(--pe-r-sm);
+  background-color: var(--pe-glass-lo);
+  box-shadow: var(--pe-hi);
   font-variant-numeric: tabular-nums;
 }
 .pp-foot .pe-btn {
