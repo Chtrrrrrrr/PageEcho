@@ -38,6 +38,8 @@
     { value: 'archived', label: '已归档' }
   ];
 
+  var REFRESH_COALESCE_MS = 120;
+
   /* ----------------------------------------------------------------- data -- */
 
   function applyTheme(theme) {
@@ -532,14 +534,58 @@
       );
     }, 500));
 
+    var pageList = ui.h('textarea', {
+      class: 'pe-textarea',
+      rows: '3',
+      placeholder: 'example.com/docs\nexample.com/blog/post-1',
+      style: { minHeight: '72px', fontFamily: 'var(--pe-mono)', fontSize: 'var(--pe-fs-sm)' }
+    });
+    pageList.value = s.disabledPages.join('\n');
+    pageList.addEventListener('input', util.debounce(function () {
+      set(
+        'disabledPages',
+        pageList.value
+          .split('\n')
+          .map(function (p) { return p.trim(); })
+          .filter(Boolean)
+      );
+    }, 500));
+
+    /* ---- the button, and everything that depends on it ------------------ */
+    // Position and the page list only mean something while the button is on, so
+    // they collapse with it instead of sitting there greyed out.
+    var fabRow = rowControl('显示悬浮按钮', checkbox(s.fab, function (v) {
+      // The switch decides for itself, not from the settings round-trip: the
+      // rows have to fold away on the click, not once storage answers.
+      syncFabRows(v);
+      set('fab', v);
+    }));
+    var fabSideRow = rowControl('悬浮按钮位置', smallSelect([
+      { value: 'right', label: '右下角' },
+      { value: 'left', label: '左下角' }
+    ], s.fabSide, function (v) { set('fabSide', v); }));
+    var pageListField = ui.h('div', { class: 'pe-field' }, [
+      ui.h('span', { class: 'pe-label', text: '这些页面不显示悬浮按钮' }),
+      pageList,
+      ui.h('span', {
+        class: 'pe-hint',
+        text: '每行一个地址，按前缀匹配：写 example.com/docs 会覆盖它下面的所有页面，写完整地址就只管那一页。地址里的参数照常参与匹配。'
+      })
+    ]);
+
+    function syncFabRows(on) {
+      var showing = on === undefined ? !!state.settings.fab : !!on;
+      fabSideRow.style.display = showing ? '' : 'none';
+      pageListField.style.display = showing ? '' : 'none';
+    }
+    syncFabRows();
+
     var body = [
       ui.h('div', { class: 'pe-section' }, [
         ui.h('span', { class: 'pe-label', text: '页面内界面' }),
-        rowControl('显示悬浮按钮', checkbox(s.fab, function (v) { set('fab', v); })),
-        rowControl('悬浮按钮位置', smallSelect([
-          { value: 'right', label: '右下角' },
-          { value: 'left', label: '左下角' }
-        ], s.fabSide, function (v) { set('fabSide', v); })),
+        fabRow,
+        fabSideRow,
+        pageListField,
         rowControl('卡片滑出方向', smallSelect([
           { value: 'right', label: '从右侧滑出' },
           { value: 'left', label: '从左侧滑出' }
@@ -566,7 +612,11 @@
           { value: 'dark', label: '深色' },
           { value: 'light', label: '浅色' }
         ], s.theme, function (v) { set('theme', v); })),
-        rowControl('显示待触发徽标', checkbox(s.badge, function (v) { set('badge', v); }))
+        rowControl('显示待触发徽标', checkbox(s.badge, function (v) { set('badge', v); })),
+        ui.h('span', {
+          class: 'pe-hint',
+          text: '按钮压在网页自己的按钮上、或视频全屏播放时，会自己先收起来，让开位置。'
+        })
       ]),
       ui.h('div', { class: 'pe-section' }, [
         ui.h('span', { class: 'pe-label', text: '浏览器集成' }),
@@ -724,10 +774,17 @@
     }
   });
 
+  /* Bulk actions write once per echo and every write lands here, so the
+     refreshes are coalesced: editing fifty rows repaints the page once. */
+  var refreshTimer = null;
   store.subscribe(function (fresh) {
     state = fresh;
-    applyTheme(fresh.settings.theme);
-    render();
+    if (refreshTimer) return;
+    refreshTimer = setTimeout(function () {
+      refreshTimer = null;
+      applyTheme(state.settings.theme);
+      render();
+    }, REFRESH_COALESCE_MS);
   });
 
   reload();

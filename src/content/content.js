@@ -27,7 +27,6 @@
 
   var RECHECK_MS = 30000;
   var DWELL_TICK_MS = 5000;
-  var DWELL_FLUSH_MS = 60000;
 
   var host = null;
   var shadow = null;
@@ -40,6 +39,7 @@
   var state = null;
   var ctx = null; // { url, statsKey, origin, visits, siteVisits, globalVisits }
   var settings = schema.DEFAULT_SETTINGS;
+  var settingsKey = ''; // serialised settings, to tell a real change from noise
 
   var sessionShown = Object.create(null); // ids shown during this page view
   var queue = [];
@@ -48,7 +48,6 @@
 
   var dwellAccum = 0;
   var dwellStart = document.visibilityState === 'visible' ? Date.now() : 0;
-  var dwellPendingSinceFlush = 0;
   var dwellTimers = Object.create(null); // id -> { dwellMs, fired }
 
   var lastUrl = location.href;
@@ -148,13 +147,229 @@
     root.appendChild(fab);
   }
 
+  /**
+   * Adopt a settings object from shared state, re-rendering only when one of
+   * them actually changed. Every visit in every tab rewrites the whole state,
+   * so the change stream is mostly noise and re-laying out the page furniture
+   * for an unchanged object is pure cost.
+   */
+  function adoptSettings(next) {
+    var key = JSON.stringify(next);
+    settings = next;
+    if (key === settingsKey) return;
+    settingsKey = key;
+    renderSettings();
+  }
+
   function renderSettings() {
     if (fab) {
-      fab.style.display = settings.fab ? 'flex' : 'none';
+      var allowed = fabAllowed();
+      fab.style.display = allowed ? 'flex' : 'none';
       fab.setAttribute('data-side', settings.fabSide === 'left' ? 'left' : 'right');
+      if (!allowed) clearYield();
     }
     if (root) root.setAttribute('data-theme', settings.theme || 'auto');
     if (stackEl) stackEl.setAttribute('data-side', settings.cardSide === 'left' ? 'left' : 'right');
+    scheduleYieldCheck(400);
+  }
+
+  /** The address we are on, even if the document has just been torn down. */
+  function pageUrl() {
+    try {
+      return location.href || lastUrl;
+    } catch (e) {
+      return lastUrl;
+    }
+  }
+
+  /** The button shows unless it is switched off or this page is on the list. */
+  function fabAllowed() {
+    return !!settings.fab && !matcher.pageBlocked(settings.disabledPages, pageUrl());
+  }
+
+  /* --------------------------------------------------- button making room -- */
+  /*
+   * A floating button in the corner is fine until the page has put something of
+   * its own there — a "back to top", a chat launcher, a buy button. Then it is
+   * in the way, so it steps aside and comes back when the corner is its again.
+   * The same rule covers video: while a video is playing over the whole
+   * viewport (the Fullscreen API, or a site's own "web fullscreen" such as
+   * bilibili's) the corner belongs to the player.
+   *
+   * Both checks are deliberately cheap and generic — no site selectors.
+   */
+  var YIELD_STRIKES = 2; // consecutive confirmations before giving way
+  var yieldState = { strikes: 0, yielded: false };
+  var yieldTimer = null;
+
+  function factsOf(el) {
+    var cs = null;
+    try {
+      cs = getComputedStyle(el);
+    } catch (e) {
+      /* a detached or exotic node: fall back to tag and role only */
+    }
+    return {
+      tag: el.tagName,
+      type: el.type || '',
+      role: el.getAttribute ? el.getAttribute('role') || '' : '',
+      cursor: cs ? cs.cursor : '',
+      painted: cs
+        ? !!cs.backgroundColor && cs.backgroundColor !== 'transparent' && cs.backgroundColor !== 'rgba(0, 0, 0, 0)'
+        : false,
+      rounded: cs ? parseFloat(cs.borderTopLeftRadius) > 0 || cs.borderTopWidth !== '0px' : false
+    };
+  }
+
+  function controlFor(el) {
+    if (!el || el.nodeType !== 1) return null;
+    if (util.looksLikeControl(factsOf(el))) return el;
+    // A control is often wrapped around a span or an icon: ask the closest
+    // control ancestor before giving up.
+    var owner =
+      el.closest &&
+      el.closest(
+        'button, a[href], input, select, textarea, summary, [role="button"], [role="link"], [role="menuitem"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"]'
+      );
+    return owner && owner !== el && util.looksLikeControl(factsOf(owner)) ? owner : null;
+  }
+
+  /* Hit testing is asked for once and remembered: an environment without it
+     must not pay for the failure on every check, and the answer never changes
+     within a page. */
+  var hitTest = null;
+
+  function canHitTest() {
+    if (hitTest !== null) return hitTest;
+    hitTest = false;
+    try {
+      var probe = document.elementsFromPoint(0, 0);
+      hitTest = !!probe && typeof probe.length === 'number';
+    } catch (e) {
+      hitTest = false;
+    }
+    return hitTest;
+  }
+
+  /**
+   * Is there a layout to reason about at all? A DOM without one (a test DOM)
+   * reports a zero-size viewport and zero rects, so there is nothing to compare
+   * — and no reason to keep scheduling checks.
+   */
+  function canPlace() {
+    var doc = document.documentElement;
+    return !!doc && (doc.clientWidth > 0 || doc.clientHeight > 0);
+  }
+
+  /** The page's own control sitting under the button, if there is one. */
+  function controlUnderFab() {
+    if (!fab || !canHitTest()) return null;
+    var rect = fab.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    var points = [
+      [rect.left + rect.width / 2, rect.top + rect.height / 2],
+      [rect.left + 5, rect.top + 5],
+      [rect.right - 5, rect.top + 5],
+      [rect.left + 5, rect.bottom - 5],
+      [rect.right - 5, rect.bottom - 5]
+    ];
+    for (var i = 0; i < points.length; i++) {
+      var stack;
+      try {
+        stack = document.elementsFromPoint(points[i][0], points[i][1]) || [];
+      } catch (e) {
+        return null;
+      }
+      for (var j = 0; j < stack.length && j < 4; j++) {
+        var el = stack[j];
+        // Our own UI retargets to the host element; skip it and the frame.
+        if (!el || el === host || el === document.documentElement || el === document.body) continue;
+        var control = controlFor(el);
+        if (control) return control;
+      }
+    }
+    return null;
+  }
+
+  /** Is a video playing over the whole viewport right now? */
+  function videoTakesOver() {
+    if (document.fullscreenElement) return true;
+    var videos = document.querySelectorAll('video');
+    if (!videos.length) return false;
+    var vw = window.innerWidth || 0;
+    var vh = window.innerHeight || 0;
+    if (!vw || !vh) return false;
+    for (var i = 0; i < videos.length; i++) {
+      var rect = videos[i].getBoundingClientRect();
+      // Flush with the viewport on one axis is what separates a player that has
+      // taken over from one sitting in the middle of a scrolled page.
+      var fillsHeight = rect.top <= 2 && rect.bottom >= vh - 2;
+      var fillsWidth = rect.left <= 2 && rect.right >= vw - 2;
+      // A player filling the height has the viewport whatever its aspect ratio
+      // (that is what a letterboxed "web fullscreen" looks like); a full-width
+      // one only counts if it nearly fills the height as well, so a banner or a
+      // hero video is still a page element.
+      if (fillsHeight && rect.width >= vw * 0.6) return true;
+      if (fillsWidth && rect.height >= vh * 0.75) return true;
+    }
+    return false;
+  }
+
+  function clearYield() {
+    if (yieldTimer) {
+      clearTimeout(yieldTimer);
+      yieldTimer = null;
+    }
+    yieldState.strikes = 0;
+    yieldState.yielded = false;
+    if (fab) {
+      fab.removeAttribute('data-yield');
+      fab.removeAttribute('aria-hidden');
+      fab.removeAttribute('tabindex');
+    }
+  }
+
+  function applyYield() {
+    if (!fab) return;
+    var hide = yieldState.strikes >= YIELD_STRIKES;
+    if (hide === yieldState.yielded) return;
+    yieldState.yielded = hide;
+    if (hide) {
+      fab.setAttribute('data-yield', 'true');
+      // Out of the tab order too, so a hidden button cannot be focused.
+      fab.setAttribute('aria-hidden', 'true');
+      fab.setAttribute('tabindex', '-1');
+    } else {
+      fab.removeAttribute('data-yield');
+      fab.removeAttribute('aria-hidden');
+      fab.removeAttribute('tabindex');
+    }
+  }
+
+  function refreshYield() {
+    if (!fab || !fabAllowed() || !canPlace()) {
+      if (fab && !fabAllowed()) clearYield();
+      return;
+    }
+    // While one of our cards is up the decision waits: the card covers the
+    // button, and whatever the page has underneath it is not in the way. The
+    // check runs again as soon as the last card leaves.
+    if (activeCards.length) return;
+    var taken = !!(videoTakesOver() || controlUnderFab());
+    yieldState.strikes = taken ? Math.min(yieldState.strikes + 1, YIELD_STRIKES) : 0;
+    applyYield();
+    // Confirm a fresh sighting shortly after, so a scroll past a button does
+    // not make our button blink.
+    if (taken && yieldState.strikes < YIELD_STRIKES) scheduleYieldCheck(220);
+  }
+
+  function scheduleYieldCheck(delay) {
+    if (!fab || !fabAllowed() || !canPlace()) return;
+    if (yieldTimer) clearTimeout(yieldTimer);
+    yieldTimer = setTimeout(function () {
+      yieldTimer = null;
+      refreshYield();
+    }, delay == null ? 150 : delay);
   }
 
   /* ------------------------------------------------------------- delivery -- */
@@ -192,6 +407,8 @@
       return entry.id !== id;
     });
     pump();
+    // The corner may be someone else's again now that our card is gone.
+    scheduleYieldCheck(120);
   }
 
   function cardEnter(echo) {
@@ -276,23 +493,14 @@
     if (fired.length) enqueue(fired);
   }
 
-  function flushDwell(force) {
-    var total = visibleDwell();
-    var delta = total - dwellPendingSinceFlush;
-    if (delta < 1000 && !force) return;
-    if (delta <= 0) return;
-    dwellPendingSinceFlush = total;
-    store.op({ op: 'dwell', url: location.href, ms: delta }).catch(function () {});
-  }
-
   function onVisibility() {
     if (document.visibilityState === 'visible') {
       dwellStart = Date.now();
       scheduleRecheck(1500);
+      scheduleYieldCheck(200);
     } else {
       if (dwellStart) dwellAccum += Date.now() - dwellStart;
       dwellStart = 0;
-      flushDwell(true);
     }
   }
 
@@ -304,8 +512,7 @@
       .load()
       .then(function (fresh) {
         state = fresh;
-        settings = fresh.settings;
-        renderSettings();
+        adoptSettings(fresh.settings);
         var found = matcher.evaluateAll(fresh.echoes, ctx, Date.now());
         armDwell(found.dwell);
         enqueue(found.due);
@@ -315,19 +522,17 @@
 
   function startPageView() {
     return store
-      .op({ op: 'visit', url: location.href, title: document.title })
+      .op({ op: 'visit', url: location.href })
       .then(function (res) {
         ctx = res.ctx;
-        settings = schema.normalizeSettings(res.settings || settings);
-        renderSettings();
+        adoptSettings(schema.normalizeSettings(res.settings || settings));
         armDwell(res.dwell);
         enqueue(res.due);
         return store.load();
       })
       .then(function (fresh) {
         state = fresh;
-        settings = fresh.settings;
-        renderSettings();
+        adoptSettings(fresh.settings);
       })
       .catch(function () {});
   }
@@ -341,7 +546,6 @@
     queue = [];
     dwellTimers = Object.create(null);
     dwellAccum = 0;
-    dwellPendingSinceFlush = 0;
     dwellStart = document.visibilityState === 'visible' ? Date.now() : 0;
     return startPageView();
   }
@@ -365,11 +569,34 @@
       if (location.href !== lastUrl) {
         lastUrl = location.href;
         resetPageView();
-      } else {
+      } else if (awaitsClock()) {
         evaluateNow();
       }
       scheduleRecheck(RECHECK_MS);
     }, delay || RECHECK_MS);
+  }
+
+  /**
+   * Does anything on this page still need a timed pass? A delay trigger or a
+   * live snooze does, and so does a dwell echo this page view has not armed yet
+   * (it may have been written from another tab). "Next visit" and "Nth visit"
+   * are answered by the visit itself, so a page whose echoes are all of those
+   * kinds skips the pass instead of re-reading the whole state.
+   */
+  function awaitsClock() {
+    var echoes = state && state.echoes;
+    if (!echoes) return true;
+    var ids = Object.keys(echoes);
+    for (var i = 0; i < ids.length; i++) {
+      var c = echoes[ids[i]];
+      if (!c || c.state === 'archived') continue;
+      if (c.doneAt && !c.repeat) continue;
+      if (c.snoozeUntil) return true;
+      var type = c.trigger && c.trigger.type;
+      if (type === 'delay') return true;
+      if (type === 'dwell' && !dwellTimers[c.id]) return true;
+    }
+    return false;
   }
 
   /* ------------------------------------------------------------- composer -- */
@@ -379,8 +606,8 @@
       return store.load();
     }).then(function (fresh) {
       state = fresh;
-      settings = fresh.settings;
-      var modal = ui.buildComposer(layer, {
+      adoptSettings(fresh.settings);
+      ui.buildComposer(layer, {
         mode: 'create',
         seed: seed || '',
         pageUrl: location.href,
@@ -420,7 +647,7 @@
       return store.load();
     }).then(function (fresh) {
       state = fresh;
-      settings = fresh.settings;
+      adoptSettings(fresh.settings);
       var mine = store.echoesFor(fresh, location.href);
       var modal = ui.buildPanel(layer, {
         echoes: mine,
@@ -481,22 +708,30 @@
     });
 
     document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('pagehide', function () {
-      flushDwell(true);
-    });
     window.addEventListener('popstate', function () {
       scheduleRecheck(600);
     });
     window.addEventListener('hashchange', function () {
       scheduleRecheck(600);
     });
+
+    // Keeping out of the page's way: the corner can change as the page scrolls,
+    // resizes, is clicked (a site's own fullscreen toggle) or goes fullscreen.
+    var nudge = function () {
+      scheduleYieldCheck(150);
+    };
+    window.addEventListener('scroll', nudge, { passive: true, capture: true });
+    window.addEventListener('resize', nudge);
+    document.addEventListener('click', function () {
+      scheduleYieldCheck(300);
+    }, true);
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange'].forEach(function (type) {
+      document.addEventListener(type, nudge);
+    });
   }
 
   function startTimers() {
     timers.push(setInterval(checkDwell, DWELL_TICK_MS));
-    timers.push(setInterval(function () {
-      flushDwell(false);
-    }, DWELL_FLUSH_MS));
     timers.push(
       setInterval(function () {
         activeCards.forEach(function (entry) {
@@ -504,7 +739,15 @@
         });
       }, 30000)
     );
+    // A slow safety net: a video can start, or a control can appear, without any
+    // event we listen for.
+    timers.push(
+      setInterval(function () {
+        if (document.visibilityState === 'visible') refreshYield();
+      }, 2500)
+    );
     scheduleRecheck(RECHECK_MS);
+    scheduleYieldCheck(600);
   }
 
   /* ----------------------------------------------------------------- boot -- */
@@ -536,10 +779,10 @@
     // Check the blocklist before touching the page at all: on an excluded site
     // we do not even create the host element.
     store
-      .load()
-      .then(function (fresh) {
-        settings = fresh.settings;
-        if (hostBlocked(settings.disabledHosts, location.hostname)) return;
+      .loadSettings()
+      .then(function (loaded) {
+        adoptSettings(loaded);
+        if (hostBlocked(loaded.disabledHosts, location.hostname)) return;
         run();
       })
       .catch(function () {
@@ -556,8 +799,7 @@
       // Watch shared state so settings edits and other tabs' echoes apply.
       store.subscribe(function (fresh) {
         state = fresh;
-        settings = fresh.settings;
-        renderSettings();
+        adoptSettings(fresh.settings);
       });
     });
   }

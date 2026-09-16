@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PageEcho · 管理页预览</title>
+    <link rel="stylesheet" href="../../src/manager/manager.css" />
+  </head>
+  <body>
+    <!-- Same markup as src/manager/manager.html; only the stub before the real
+         scripts differs, so what you see is the shipped page. -->
+    <div class="pe-root" id="app" data-theme="auto">
+      <header class="mg-head">
+        <div class="mg-brand">
+          <span class="mg-logo" id="logo"></span>
+          <span>PageEcho</span>
+          <small>回声管理</small>
+        </div>
+        <div class="mg-head__search">
+          <input id="search" class="pe-input" type="search" placeholder="搜索留言或网址…" />
+        </div>
+        <div class="mg-head__actions">
+          <button id="btn-export" class="pe-btn" type="button">导出</button>
+          <button id="btn-import" class="pe-btn" type="button">导入</button>
+          <button id="btn-settings" class="pe-btn pe-btn--primary" type="button">设置</button>
+        </div>
+      </header>
+      <main class="mg-main">
+        <aside class="mg-side" id="side"></aside>
+        <section class="mg-content">
+          <div class="mg-toolbar" id="toolbar"></div>
+          <div class="mg-list" id="list"></div>
+        </section>
+      </main>
+      <input id="file-input" type="file" accept="application/json,.json" hidden />
+    </div>
+
+    <script src="stub.js"></script>
+    <script src="../../src/core/ext.js"></script>
+    <script src="../../src/core/util.js"></script>
+    <script src="../../src/core/schema.js"></script>
+    <script src="../../src/core/matcher.js"></script>
+    <script src="../../src/core/store.js"></script>
+    <script src="../../src/ui/styles.js"></script>
+    <script src="../../src/ui/components.js"></script>
+    <script src="../../src/manager/manager.js"></script>
+  </body>
+</html>

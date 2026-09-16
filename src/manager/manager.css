@@ -1,3 +1,12 @@
+/*
+ * PageEcho — manager page (GitHub / Primer).
+ *
+ * The page is a GitHub canvas: flat, white (or #0d1117), with a sticky header
+ * bar on canvas.subtle, a sidebar of Boxes and rows, and a grid of list rows
+ * that are the same Box one step smaller. Structure comes from hairlines and
+ * the 6px radius; the only depth is Primer's small row shadow.
+ */
+
 html,
 body {
   margin: 0;
@@ -5,52 +14,48 @@ body {
   min-height: 100%;
 }
 
+html {
+  background-color: #0d1117;
+}
+
 body {
-  background: #0f1319;
-  background-image:
-    radial-gradient(900px 560px at 10% -10%, rgba(77, 159, 224, 0.22), transparent 60%),
-    radial-gradient(760px 520px at 92% -4%, rgba(155, 140, 240, 0.18), transparent 62%),
-    radial-gradient(820px 620px at 62% 112%, rgba(63, 184, 148, 0.12), transparent 60%);
-  background-attachment: fixed;
-  color: #e7ecf4;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", Roboto, sans-serif;
+  background-color: transparent;
+  color: #e6edf3;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 21px;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* JS resolves settings.theme onto <html>; the media query is the pre-script
    fallback so the page never flashes the wrong colour. */
+html[data-theme="dark"] {
+  background-color: #0d1117;
+}
 html[data-theme="dark"] body {
-  background-color: #0f1319;
-  background-image:
-    radial-gradient(900px 560px at 10% -10%, rgba(77, 159, 224, 0.22), transparent 60%),
-    radial-gradient(760px 520px at 92% -4%, rgba(155, 140, 240, 0.18), transparent 62%),
-    radial-gradient(820px 620px at 62% 112%, rgba(63, 184, 148, 0.12), transparent 60%);
-  color: #e7ecf4;
+  color: #e6edf3;
+}
+html[data-theme="light"] {
+  background-color: #ffffff;
 }
 html[data-theme="light"] body {
-  background-color: #f2f5f9;
-  background-image:
-    radial-gradient(900px 560px at 10% -10%, rgba(29, 111, 174, 0.18), transparent 60%),
-    radial-gradient(760px 520px at 92% -4%, rgba(91, 95, 192, 0.14), transparent 62%),
-    radial-gradient(820px 620px at 62% 112%, rgba(31, 143, 107, 0.1), transparent 60%);
-  color: #141a24;
+  color: #1f2328;
 }
 
 @media (prefers-color-scheme: light) {
+  html:not([data-theme]) {
+    background-color: #ffffff;
+  }
   html:not([data-theme]) body {
-    background-color: #f2f5f9;
-    background-image:
-    radial-gradient(900px 560px at 10% -10%, rgba(29, 111, 174, 0.18), transparent 60%),
-    radial-gradient(760px 520px at 92% -4%, rgba(91, 95, 192, 0.14), transparent 62%),
-    radial-gradient(820px 620px at 62% 112%, rgba(31, 143, 107, 0.1), transparent 60%);
-    color: #141a24;
+    color: #1f2328;
   }
 }
 
 #app {
   max-width: 1360px;
   margin: 0 auto;
-  padding: 22px 26px 64px;
+  padding: 12px 24px 64px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -58,9 +63,14 @@ html[data-theme="light"] body {
 
 /* ------------------------------------------------------------------ head -- */
 
+/* A toolbar Box, not a plate of glass: it sits on the subtle canvas, is closed
+   off by one hairline and stays put while the list scrolls. It pins to the top
+   edge (not the page's own 12px padding) so no content peeks through above it,
+   and it stays inside the page column rather than bleeding to the viewport,
+   which is what makes it work at any window width. */
 .mg-head {
   position: sticky;
-  top: 12px;
+  top: 0;
   z-index: 6;
   display: flex;
   align-items: center;
@@ -69,10 +79,8 @@ html[data-theme="light"] body {
   padding: 12px 16px;
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r);
-  background-color: var(--pe-tint);
-  box-shadow: var(--pe-e2), var(--pe-hi);
-  backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
-  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
+  background-color: var(--pe-subtle);
+  box-shadow: var(--pe-e1);
 }
 
 .mg-brand {
@@ -81,8 +89,7 @@ html[data-theme="light"] body {
   gap: 7px;
   font-size: 16px;
   line-height: 23px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-weight: 600;
 }
 .mg-brand small {
   font-size: var(--pe-fs-sm);
@@ -91,7 +98,7 @@ html[data-theme="light"] body {
 }
 .mg-logo {
   display: inline-flex;
-  color: var(--pe-accent);
+  color: var(--pe-accent-fg);
 }
 
 .mg-head__search {
@@ -114,8 +121,14 @@ html[data-theme="light"] body {
 }
 
 @media (max-width: 780px) {
+  #app {
+    padding: 12px 16px 48px;
+  }
   .mg-main {
     grid-template-columns: 1fr;
+  }
+  .mg-side {
+    position: static;
   }
 }
 
@@ -124,16 +137,16 @@ html[data-theme="light"] body {
   flex-direction: column;
   gap: 14px;
   position: sticky;
-  top: 18px;
+  /* clear the pinned header (58px) plus the page gap */
+  top: 70px;
 }
 
+/* A panel is a Box: canvas, hairline, 6px, Primer's small shadow. */
 .mg-panel {
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r);
   background-color: var(--pe-tint);
-  box-shadow: var(--pe-e2), var(--pe-hi);
-  backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
-  -webkit-backdrop-filter: blur(var(--pe-blur)) saturate(var(--pe-sat));
+  box-shadow: var(--pe-e1);
   padding: 11px;
   display: flex;
   flex-direction: column;
@@ -141,22 +154,24 @@ html[data-theme="light"] body {
 }
 .mg-panel h3 {
   margin: 0 0 5px;
-  padding: 0 5px;
+  padding: 0 6px;
   font-size: var(--pe-fs-micro);
-  line-height: 17px;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: var(--pe-fg-faint);
-  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pe-fg-dim);
+  font-weight: 600;
 }
 
+/* Navigation rows follow GitHub's sidebar: a neutral selection wash and a
+   semibold label, never a coloured panel. */
 .mg-filter {
   display: flex;
   align-items: center;
   gap: 7px;
   min-height: 28px;
   border: 1px solid transparent;
-  background: transparent;
+  background-color: transparent;
   color: var(--pe-fg-dim);
   text-align: left;
   padding: 0 8px;
@@ -165,17 +180,17 @@ html[data-theme="light"] body {
   line-height: 21px;
   cursor: pointer;
   width: 100%;
-  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+  transition: background-color 0.14s ease, color 0.14s ease;
 }
 .mg-filter:hover {
-  background: var(--pe-flat-hi);
+  background-color: var(--pe-selected);
   color: var(--pe-fg);
 }
+.mg-filter:focus-visible { outline: 2px solid var(--pe-accent); outline-offset: -2px; }
 .mg-filter[aria-pressed="true"] {
-  background: var(--pe-accent-soft);
-  color: var(--pe-accent);
-  font-weight: 650;
-  box-shadow: var(--pe-in-1);
+  background-color: var(--pe-selected);
+  color: var(--pe-fg);
+  font-weight: 600;
 }
 .mg-filter__count {
   margin-left: auto;
@@ -184,14 +199,14 @@ html[data-theme="light"] body {
   font-variant-numeric: tabular-nums;
 }
 .mg-filter[aria-pressed="true"] .mg-filter__count {
-  color: var(--pe-accent);
+  color: var(--pe-fg-dim);
 }
 
 .mg-stat {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding: 2px 5px;
+  padding: 2px 6px;
   font-size: var(--pe-fs-sm);
   line-height: 18px;
   color: var(--pe-fg-dim);
@@ -211,6 +226,8 @@ html[data-theme="light"] body {
   min-width: 0;
 }
 
+/* The toolbar above the list is the same Box on the subtle canvas that GitHub
+   puts above a table. */
 .mg-toolbar {
   display: flex;
   align-items: center;
@@ -218,13 +235,13 @@ html[data-theme="light"] body {
   flex-wrap: wrap;
   font-size: var(--pe-fs-sm);
   line-height: 18px;
-  color: var(--pe-fg-faint);
+  color: var(--pe-fg-dim);
   min-height: 30px;
   padding: 8px 11px;
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r);
-  background-color: var(--pe-glass-lo);
-  box-shadow: var(--pe-hi);
+  background-color: var(--pe-subtle);
+  box-shadow: var(--pe-e1);
 }
 .mg-toolbar .pe-select-wrap {
   width: 146px;
@@ -251,24 +268,26 @@ html[data-theme="light"] body {
   }
 }
 
+/* A row is the same Box as a card, one step smaller. Hover follows GitHub's
+   list rows: the surface goes to canvas.subtle instead of every edge lighting
+   up. */
 .mg-card {
   border: 1px solid var(--pe-line);
   border-radius: var(--pe-r);
   background-color: var(--pe-tint);
-  box-shadow: var(--pe-e1), var(--pe-hi);
+  box-shadow: var(--pe-e1);
   padding: 15px;
   display: flex;
   gap: 12px;
-  transition: border-color 0.14s ease, background-color 0.14s ease, box-shadow 0.14s ease;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
 }
 .mg-card:hover {
-  border-color: var(--pe-line-strong);
-  background-color: var(--pe-glass);
-  box-shadow: var(--pe-e2), var(--pe-hi);
+  background-color: var(--pe-tint-hi);
 }
+/* A selected row is an accent-tinted Box with an accent hairline. */
 .mg-card[data-selected="true"] {
-  border-color: var(--pe-accent-line);
-  background: var(--pe-accent-soft);
+  border-color: var(--pe-accent);
+  background-color: var(--pe-accent-soft);
 }
 .mg-card__check {
   padding-top: 2px;
@@ -348,8 +367,10 @@ html[data-theme="light"] body {
   padding: 0 9px;
   font-size: var(--pe-fs-sm);
 }
+/* Replies are a timeline: one hairline rail on the left, the way GitHub hangs
+   a comment thread off its gutter. */
 .mg-card__replies {
-  border-left: 2px solid var(--pe-line-strong);
+  border-left: 2px solid var(--pe-line);
   padding-left: 12px;
   display: flex;
   flex-direction: column;
@@ -368,37 +389,37 @@ html[data-theme="light"] body {
   padding: 0 8px;
   font-size: var(--pe-fs-micro);
   line-height: 1;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 500;
   border: 1px solid var(--pe-line);
-  background: var(--pe-flat);
+  background-color: var(--pe-control);
   color: var(--pe-fg-dim);
   white-space: nowrap;
 }
 .mg-pill[data-status="pending"] {
-  color: var(--pe-accent);
+  color: var(--pe-accent-fg);
   border-color: var(--pe-accent-line);
-  background: var(--pe-accent-soft);
+  background-color: var(--pe-accent-soft);
 }
 .mg-pill[data-status="snoozed"] {
-  color: var(--pe-info);
-  border-color: rgba(155, 140, 240, 0.36);
-  background: var(--pe-info-soft);
+  color: var(--pe-info-fg);
+  border-color: var(--pe-info-line);
+  background-color: var(--pe-info-soft);
 }
 .mg-pill[data-status="delivered"] {
-  color: var(--pe-ok);
-  border-color: rgba(63, 184, 148, 0.36);
-  background: var(--pe-ok-soft);
+  color: var(--pe-ok-fg);
+  border-color: var(--pe-ok-line);
+  background-color: var(--pe-ok-soft);
 }
 
+/* An empty state is a quiet Box, not a dashed outline. */
 .mg-empty {
-  border: 1px dashed var(--pe-line-strong);
-  background-color: var(--pe-tint);
-  box-shadow: var(--pe-e1), var(--pe-hi);
+  border: 1px solid var(--pe-line);
+  background-color: var(--pe-subtle);
+  box-shadow: var(--pe-e1);
   border-radius: var(--pe-r);
   padding: 36px 20px;
   text-align: center;
-  color: var(--pe-fg-faint);
+  color: var(--pe-fg-dim);
   font-size: var(--pe-fs-base);
   line-height: 20px;
   display: flex;

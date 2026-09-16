@@ -128,12 +128,7 @@
 
   PE.ext = {
     api: api,
-    promiseStyle: promiseStyle,
-    isFirefox: promiseStyle,
     promisify: promisify,
-    soft: soft,
-
-    send: sendMessage,
 
     /** Send a message to the background and unwrap { __error }. */
     request: function (msg) {
@@ -167,19 +162,11 @@
 
     get: promisify(api.storage.local.get, api.storage.local),
     set: promisify(api.storage.local.set, api.storage.local),
-    remove: promisify(api.storage.local.remove, api.storage.local),
-    clear: promisify(api.storage.local.clear, api.storage.local),
 
     onMessage: onMessage,
 
     onStorageChanged: function (cb) {
       api.storage.onChanged.addListener(cb);
-    },
-
-    getURL: function (p) {
-      return api.runtime.getURL(p);
-    },
-
-    manifest: api.runtime.getManifest()
+    }
   };
 })();

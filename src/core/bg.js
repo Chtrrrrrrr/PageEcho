@@ -19,6 +19,8 @@
 
   var queue = Promise.resolve();
 
+  function noop() {}
+
   function readState() {
     return ext.get(schema.STORAGE_KEY).then(function (res) {
       var raw = res && res[schema.STORAGE_KEY];
@@ -37,29 +39,16 @@
 
   /** Serialised read -> mutate -> write. `fn(state)` returns the op result. */
   function withState(fn) {
-    var run = queue.then(
-      function () {
-        return readState().then(function (state) {
-          var result = fn(state);
-          return writeState(state).then(function () {
-            return result;
-          });
+    var run = queue.then(function () {
+      return readState().then(function (state) {
+        var result = fn(state);
+        return writeState(state).then(function () {
+          return result;
         });
-      },
-      function () {
-        return readState().then(function (state) {
-          var result = fn(state);
-          return writeState(state).then(function () {
-            return result;
-          });
-        });
-      }
-    );
+      });
+    });
     // keep the chain alive even if one op rejects
-    queue = run.then(
-      function () {},
-      function () {}
-    );
+    queue = run.then(noop, noop);
     return run;
   }
 
@@ -94,7 +83,7 @@
     state.stats.pages = survivors;
   }
 
-  function recordVisit(state, url, title) {
+  function recordVisit(state, url) {
     var now = Date.now();
     var sk = matcher.statsKey(url);
     var origin = matcher.originOf(url);
@@ -105,34 +94,20 @@
         origin: origin,
         visits: 0,
         siteVisits: 0,
-        globalVisits: state.global.visits,
-        now: now
+        globalVisits: state.global.visits
       };
     }
 
     var page = state.stats.pages[sk];
     if (!page) {
-      page = state.stats.pages[sk] = {
-        visits: 0,
-        firstSeen: now,
-        lastSeen: now,
-        title: '',
-        dwellMs: 0
-      };
+      page = state.stats.pages[sk] = { visits: 0, firstSeen: now, lastSeen: now };
     }
     page.visits += 1;
     page.lastSeen = now;
-    if (title) page.title = String(title).slice(0, 200);
 
     var site = state.stats.sites[origin];
     if (!site) {
-      site = state.stats.sites[origin] = {
-        visits: 0,
-        firstSeen: now,
-        lastSeen: now,
-        title: '',
-        dwellMs: 0
-      };
+      site = state.stats.sites[origin] = { visits: 0, firstSeen: now, lastSeen: now };
     }
     site.visits += 1;
     site.lastSeen = now;
@@ -147,32 +122,28 @@
       url: url,
       statsKey: sk,
       origin: origin,
-      pageTitle: page.title,
       visits: page.visits,
       siteVisits: site.visits,
-      globalVisits: state.global.visits,
-      now: now
+      globalVisits: state.global.visits
     };
   }
 
+  /**
+   * Snapshot of the counters an echo is bound to, taken at creation time, so
+   * "next visit" and "the Nth visit" can be measured from that moment on.
+   */
   function buildCreated(state, match, ctx) {
-    var created = {
-      statsKey: ctx ? ctx.statsKey || matcher.statsKey(match.key || '') : '',
-      origin: match.origin || (ctx && ctx.origin) || '',
-      visits: ctx ? ctx.visits || 0 : 0,
-      siteVisits: ctx ? ctx.siteVisits || 0 : 0,
-      globalVisits: ctx ? ctx.globalVisits || 0 : 0
+    var statsKey = (ctx && ctx.statsKey) || (match.scope === 'page' ? matcher.statsKey(match.key) : '');
+    var origin = match.origin || (ctx && ctx.origin) || '';
+    var page = state.stats.pages[statsKey];
+    var site = state.stats.sites[origin];
+    return {
+      statsKey: statsKey,
+      origin: origin,
+      visits: page ? page.visits : (ctx && ctx.visits) || 0,
+      siteVisits: site ? site.visits : (ctx && ctx.siteVisits) || 0,
+      globalVisits: state.global.visits
     };
-    if (match.scope === 'page' && !created.statsKey) {
-      created.statsKey = matcher.statsKey(match.key);
-    }
-    if (!created.origin && match.origin) created.origin = match.origin;
-    var page = state.stats.pages[created.statsKey];
-    var site = state.stats.sites[created.origin];
-    if (page) created.visits = page.visits;
-    if (site) created.siteVisits = site.visits;
-    created.globalVisits = state.global.visits;
-    return created;
   }
 
   /* -------------------------------------------------------------------- ops */
@@ -189,39 +160,14 @@
 
     switch (op.op) {
       case 'visit': {
-        var ctx = recordVisit(state, op.url, op.title);
-        var view = {
-          url: op.url,
-          statsKey: ctx.statsKey,
-          origin: ctx.origin,
-          visits: ctx.visits,
-          siteVisits: ctx.siteVisits,
-          globalVisits: ctx.globalVisits
-        };
-        var found = matcher.evaluateAll(state.echoes, view, now);
+        var ctx = recordVisit(state, op.url);
+        var found = matcher.evaluateAll(state.echoes, ctx, now);
         return {
-          ctx: {
-            url: op.url,
-            statsKey: ctx.statsKey,
-            origin: ctx.origin,
-            pageTitle: ctx.pageTitle,
-            visits: ctx.visits,
-            siteVisits: ctx.siteVisits,
-            globalVisits: ctx.globalVisits
-          },
+          ctx: ctx,
           due: found.due,
           dwell: found.dwell,
           settings: state.settings
         };
-      }
-
-      case 'dwell': {
-        var key = matcher.statsKey(op.url);
-        var p = state.stats.pages[key];
-        if (p) p.dwellMs = (p.dwellMs || 0) + util.clamp(op.ms, 0, 6 * util.HOUR);
-        var s = state.stats.sites[matcher.originOf(op.url)];
-        if (s) s.dwellMs = (s.dwellMs || 0) + util.clamp(op.ms, 0, 6 * util.HOUR);
-        return { ok: true };
       }
 
       case 'create': {
@@ -429,10 +375,7 @@
 
   PE.bg = {
     readState: readState,
-    writeState: writeState,
     withState: withState,
-    applyOp: applyOp,
-    handleMessage: handleMessage,
-    pruneStats: pruneStats
+    handleMessage: handleMessage
   };
 })();

@@ -159,6 +159,49 @@
     return d.getTime();
   }
 
+  /**
+   * Is this element one of the page's own controls — something our floating
+   * button must not sit on top of?
+   *
+   * The caller supplies the facts (tag, type, role, and a couple of computed
+   * styles) so the decision stays pure and testable. Anything that is a control
+   * by tag or role counts straight away; a link or a `cursor: pointer` box only
+   * counts when it is painted like a button (a filled, rounded box), which is
+   * what keeps a footer link or a text column from chasing our button away.
+   */
+  function looksLikeControl(f) {
+    if (!f || !f.tag) return false;
+    var tag = String(f.tag).toUpperCase();
+    if (tag === 'BUTTON' || tag === 'SUMMARY' || tag === 'SELECT' || tag === 'TEXTAREA') return true;
+    if (tag === 'INPUT') {
+      var type = String(f.type || 'text').toLowerCase();
+      return (
+        type === 'button' ||
+        type === 'submit' ||
+        type === 'reset' ||
+        type === 'checkbox' ||
+        type === 'radio' ||
+        type === 'file' ||
+        type === 'image' ||
+        type === 'color' ||
+        type === 'range'
+      );
+    }
+    var role = String(f.role || '').toLowerCase();
+    if (
+      role === 'button' ||
+      role === 'checkbox' ||
+      role === 'radio' ||
+      role === 'switch' ||
+      role === 'menuitem' ||
+      role === 'tab'
+    ) {
+      return true;
+    }
+    if (!f.painted || !f.rounded) return false;
+    return tag === 'A' || role === 'link' || String(f.cursor || '') === 'pointer';
+  }
+
   PE.util = {
     MINUTE: MINUTE,
     HOUR: HOUR,
@@ -169,7 +212,6 @@
     humanElapsed: humanElapsed,
     formatDateTime: formatDateTime,
     formatDate: formatDate,
-    formatShortDate: formatShortDate,
     formatShortDateTime: formatShortDateTime,
     truncate: truncate,
     firstLine: firstLine,
@@ -177,10 +219,9 @@
     onIdle: onIdle,
     safeJson: safeJson,
     readingTimeMs: readingTimeMs,
-    READING_BASE: READING_BASE,
     READING_PER_CHAR: READING_PER_CHAR,
-    READING_MAX: READING_MAX,
     endOfToday: endOfToday,
-    tomorrowMorning: tomorrowMorning
+    tomorrowMorning: tomorrowMorning,
+    looksLikeControl: looksLikeControl
   };
 })();

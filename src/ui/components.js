@@ -550,22 +550,63 @@
     }
     document.addEventListener('visibilitychange', onVisibility);
 
+    /* ---- leaving ---------------------------------------------------------
+     * A card is moved out of the stack by *layout*, not by a transform: the
+     * stack is bottom-anchored, so as this card's height animates to zero the
+     * cards above it slide down smoothly. That only holds if this card's own
+     * exit starts from exactly what is on screen at that moment — and "that
+     * moment" is often the middle of its own entrance, or the middle of a
+     * slide-down caused by the card below it having just left.
+     *
+     * Dropping the entrance class and applying the exit state in one go used to
+     * snap the card to its final box first: the running `pe-slide-in` animation
+     * outranks inline styles, so the exit transition could not take over until
+     * the entrance had finished, and the card jumped. So the frame on screen is
+     * pinned inline with the transition off, the entrance class is dropped only
+     * after that, and the transition is handed back before `.pe-out` supplies
+     * the exit targets. The exit therefore always continues from the pinned
+     * frame, whatever it interrupted.
+     */
+    var EXIT_MS = 300;
+
+    /** Pin an element's current box and its animated opacity/transform. */
+    function pin(el, withHeight) {
+      var cs = getComputedStyle(el);
+      el.style.transition = 'none';
+      // A box with no resolved height (never laid out, or already detached)
+      // falls back to whatever the element reports, so the pin is never empty.
+      if (withHeight) {
+        el.style.height = !cs.height || cs.height === 'auto' ? (el.offsetHeight || 0) + 'px' : cs.height;
+      }
+      el.style.opacity = cs.opacity;
+      el.style.transform = cs.transform === 'none' ? '' : cs.transform;
+    }
+
     function dismiss() {
       if (timerState.done) return;
       timerState.done = true;
       cancelFrame(timerState.frame);
       document.removeEventListener('visibilitychange', onVisibility);
-      // Freeze the current height so the collapse can be animated, then let the
-      // cards below slide up into the freed space.
-      card.style.height = (card.offsetHeight || 0) + 'px';
-      void card.offsetWidth;
+
+      pin(card, true);
+      // The entrance is a sequenced group — the header, the message, the meta
+      // and the footer animate on their own delays — so pin those too, or
+      // dropping the class pops them mid-flight.
+      Array.prototype.forEach.call(card.children, function (child) {
+        pin(child, false);
+      });
       card.classList.remove('pe-in');
+      // Flush the pinned frame, hand the transition back, then let the exit
+      // state (which is marked important, so it wins over the pins) animate it
+      // away.
+      void card.offsetWidth;
+      card.style.transition = '';
       card.classList.add('pe-out');
       // Long enough for both the slide and the height collapse to finish.
       setTimeout(function () {
         if (card.parentNode) card.parentNode.removeChild(card);
         if (opts.onDismissed) opts.onDismissed();
-      }, 300);
+      }, EXIT_MS);
     }
 
     return {
@@ -739,6 +780,11 @@
     function rerenderTrigger() {
       triggerExtra.textContent = '';
       var row = h('div', { class: 'pe-row pe-row--wrap' });
+      // An empty row would still spend a gap in the box, so a row that has
+      // nothing to show is simply not attached.
+      function attach() {
+        if (row.firstChild) triggerExtra.appendChild(row);
+      }
 
       if (model.triggerType === 'next-visit') {
         // The chip already says "下次访问"; no helper line needed.
@@ -764,7 +810,7 @@
           })
         );
         row.appendChild(h('span', { class: 'pe-hint', text: '次访问时' }));
-        triggerExtra.appendChild(row);
+        attach();
         triggerHint.textContent =
           '当前：本页 ' + stats.visits + ' · 本站 ' + stats.siteVisits + ' · 全部 ' + stats.globalVisits;
         return;
@@ -780,12 +826,12 @@
             model.dwellUnit = v;
           })
         );
-        triggerExtra.appendChild(row);
+        attach();
         triggerHint.textContent = '只统计标签页可见时的停留时间';
         return;
       }
 
-      triggerExtra.appendChild(row);
+      attach();
     }
 
     function rerenderScope() {
@@ -1015,17 +1061,14 @@
 
   PE.ui = {
     h: h,
-    append: append,
     icon: icon,
     btn: btn,
     select: select,
-    chipRow: chipRow,
     buildModal: buildModal,
     buildCard: buildCard,
     buildComposer: buildComposer,
     buildPanel: buildPanel,
     toast: toast,
-    TRIGGER_CHOICES: TRIGGER_CHOICES,
-    SCOPE_CHOICES: SCOPE_CHOICES
+    TRIGGER_CHOICES: TRIGGER_CHOICES
   };
 })();

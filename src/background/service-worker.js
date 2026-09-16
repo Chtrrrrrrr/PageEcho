@@ -44,6 +44,8 @@ if (typeof importScripts === 'function') {
   var MENU_MANAGER = 'pe-open-manager';
   var MENU_PANEL = 'pe-page-panel';
 
+  var BADGE_COALESCE_MS = 150;
+
   function isInjectable(url) {
     return !!url && /^(https?|file):/.test(url);
   }
@@ -92,6 +94,17 @@ if (typeof importScripts === 'function') {
         return refreshBadgeForTab(tab.id, tab.url || '');
       })
       .catch(function () {});
+  }
+
+  /* Every visit from every tab writes the state, so the raw change stream is
+     bursty; one badge pass per quiet moment is enough. */
+  var badgeTimer = null;
+  function scheduleBadgeRefresh() {
+    if (badgeTimer) return;
+    badgeTimer = setTimeout(function () {
+      badgeTimer = null;
+      refreshActiveBadge();
+    }, BADGE_COALESCE_MS);
   }
 
   /* ------------------------------------------------------- content script --- */
@@ -233,7 +246,7 @@ if (typeof importScripts === 'function') {
       return PE.bg.handleMessage(msg).then(function (res) {
         var opName = msg.op && msg.op.op;
         if (msg.type === 'PE_STATE') return res;
-        if (opName && opName !== 'visit' && opName !== 'ping' && opName !== 'dwell') {
+        if (opName && opName !== 'visit' && opName !== 'ping') {
           if (sender && sender.tab && sender.tab.id != null) {
             refreshBadgeForTab(sender.tab.id, sender.tab.url || '');
           }
@@ -303,7 +316,7 @@ if (typeof importScripts === 'function') {
 
   api.storage.onChanged.addListener(function (changes, area) {
     if (area && area !== 'local') return;
-    if (changes && changes[schema.STORAGE_KEY]) refreshActiveBadge();
+    if (changes && changes[schema.STORAGE_KEY]) scheduleBadgeRefresh();
   });
 
   buildMenus();

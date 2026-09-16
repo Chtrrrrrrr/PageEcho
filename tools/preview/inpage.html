@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PageEcho · 页面内预览</title>
+    <style>
+      /* A stand-in GitHub page: the header bar, a light canvas, Boxes and
+         hairlines. Our own surfaces are opaque and dark, so this is the bright
+         backdrop case — if they hold up here, they hold up anywhere. */
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #ffffff;
+        color: #1f2328;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 21px;
+      }
+
+      .site-nav {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        padding: 0 32px;
+        background: #f6f8fa;
+        border-bottom: 1px solid #d0d7de;
+        font-size: 14px;
+        color: #656d76;
+        position: sticky;
+        top: 0;
+      }
+      .site-nav b { color: #1f2328; font-size: 16px; font-weight: 600; margin-right: 8px; }
+      .site-nav .price { margin-left: auto; color: #1a7f37; font-weight: 600; }
+
+      .hero {
+        padding: 26px 32px 22px;
+        border-bottom: 1px solid #d0d7de;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .hero h1 { margin: 0; font-size: 28px; line-height: 38px; font-weight: 600; }
+      .hero p { margin: 0; color: #656d76; }
+      .hero .tag {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: #1a7f37;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .wrap {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 24px 32px 90px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 288px;
+        gap: 22px;
+        align-items: start;
+      }
+      /* A Box: canvas, hairline, 6px, header bar on the subtle canvas. */
+      .card {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        padding-bottom: 20px;
+      }
+      .card h2 {
+        margin: 0;
+        padding: 14px 20px;
+        font-size: 16px;
+        line-height: 24px;
+        font-weight: 600;
+        background: #f6f8fa;
+        border-bottom: 1px solid #d0d7de;
+        border-radius: 6px 6px 0 0;
+      }
+      .card .byline { color: #656d76; font-size: 13px; line-height: 19px; margin: 14px 20px 0; }
+      .card p { color: #1f2328; margin: 12px 20px 0; }
+
+      .shot {
+        margin: 16px 20px 0;
+        height: 132px;
+        border-radius: 6px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 4px;
+        color: #ffffff;
+        background: linear-gradient(115deg, #0969da, #1a7f37);
+        font-size: 13px;
+      }
+      .shot strong { font-size: 17px; line-height: 24px; }
+
+      .rail { display: flex; flex-direction: column; gap: 14px; }
+      .rail .box {
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        padding: 16px;
+        color: #656d76;
+        font-size: 13px;
+        line-height: 19px;
+      }
+      .rail .box b { display: block; color: #1f2328; font-size: 14px; line-height: 21px; margin-bottom: 8px; }
+      .rail .swatches { display: flex; gap: 6px; margin-top: 10px; }
+      .rail .swatches i { width: 34px; height: 34px; border-radius: 6px; display: block; border: 1px solid rgba(31, 35, 40, 0.15); }
+    </style>
+  </head>
+  <body>
+    <nav class="site-nav"><b>Northwind</b><span>产品</span><span>设计</span><span>文档</span><span class="price">¥ 128 / 月</span></nav>
+    <header class="hero">
+      <span class="tag">DESIGN NOTES</span>
+      <h1>实心面板也要放得下：边界靠一根发丝线</h1>
+      <p>界面不再透光之后，层次就得由边框、圆角和阴影来说明。</p>
+    </header>
+    <div class="wrap">
+      <section class="card" id="article">
+        <h2>关于界面层次的一点记录</h2>
+        <div class="byline">2026 年 9 月 16 日 · 6 分钟阅读</div>
+      </section>
+      <aside class="rail">
+        <div class="box"><b>本周数据</b>访问 1,284 · 停留 3 分 12 秒</div>
+        <div class="box">
+          <b>色板</b>中性色打底，强调色只留给一个动作。
+          <div class="swatches">
+            <i style="background:#0969da"></i><i style="background:#1f883d"></i>
+            <i style="background:#8250df"></i><i style="background:#cf222e"></i>
+          </div>
+        </div>
+        <div class="box"><b>提醒</b>在真实内容上检查一次对比度。</div>
+      </aside>
+    </div>
+
+    <script src="stub.js"></script>
+    <script src="../../src/core/ext.js"></script>
+    <script src="../../src/core/util.js"></script>
+    <script src="../../src/core/schema.js"></script>
+    <script src="../../src/core/matcher.js"></script>
+    <script src="../../src/core/store.js"></script>
+    <script src="../../src/ui/styles.js"></script>
+    <script src="../../src/ui/components.js"></script>
+    <script src="inpage.js"></script>
+  </body>
+</html>

@@ -117,6 +117,66 @@
     return util.truncate(u.hostname + path, 64);
   }
 
+  /* ------------------------------------------------------- page blocklist -- */
+
+  /** "example.com/docs?tab=1" — the address without its scheme. */
+  function bareAddress(raw) {
+    var key = matchKey(raw, 'keep');
+    return key ? key.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '') : '';
+  }
+
+  function pagePatternOf(raw) {
+    var text = String(raw == null ? '' : raw).trim();
+    if (!text) return '';
+    text = text.replace(/\*+$/, ''); // a trailing wildcard means the same as a prefix
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(text)) text = 'https://' + text;
+    var bare = bareAddress(text);
+    if (!bare) return '';
+    // A trailing slash only means "everything here", which the prefix match
+    // already covers, so "example.com/" and "example.com" behave the same.
+    return bare.replace(/\/+$/, '');
+  }
+
+  /**
+   * Pages the user has told us to keep the floating button off. Entries are
+   * addresses and match by prefix, so "example.com/docs" covers every page
+   * under it while "example.com/docs/edit" covers exactly one — the boundary
+   * check keeps the shorter entry from swallowing "example.com/docs2".
+   *
+   * The normalised patterns are memoised per list: the array identity only
+   * changes when the user edits the setting, so the parsing happens once
+   * instead of on every scroll-driven check.
+   */
+  var patternCacheFor = null;
+  var patternCache = [];
+
+  function patternsOf(pages) {
+    if (pages === patternCacheFor) return patternCache;
+    var out = [];
+    for (var i = 0; i < (pages ? pages.length : 0); i++) {
+      var pattern = pagePatternOf(pages[i]);
+      if (pattern) out.push(pattern);
+    }
+    patternCacheFor = pages;
+    patternCache = out;
+    return out;
+  }
+
+  function pageBlocked(pages, url) {
+    if (!pages || !pages.length) return false;
+    var bare = bareAddress(url);
+    if (!bare) return false;
+    var patterns = patternsOf(pages);
+    for (var i = 0; i < patterns.length; i++) {
+      var pattern = patterns[i];
+      if (bare === pattern) return true;
+      if (bare.indexOf(pattern) !== 0) continue;
+      var next = bare.charAt(pattern.length);
+      if (next === '/' || next === '?' || next === '#') return true;
+    }
+    return false;
+  }
+
   /** Live counters relevant to an echo's scope, from stored stats. */
   function countsFor(state, echo) {
     var created = echo.created || {};
@@ -283,21 +343,17 @@
   }
 
   PE.matcher = {
-    parse: parse,
-    cleanSearch: cleanSearch,
     originOf: originOf,
     statsKey: statsKey,
     matchKey: matchKey,
     buildMatch: buildMatch,
     matches: matches,
     pageLabel: pageLabel,
-    hostOf: hostOf,
+    pageBlocked: pageBlocked,
     whereLabel: whereLabel,
     countsFor: countsFor,
-    countFor: countFor,
     ctxFor: ctxFor,
     isDue: isDue,
-    dwellArmed: dwellArmed,
     evaluateAll: evaluateAll,
     scheduleText: scheduleText
   };

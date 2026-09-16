@@ -18,6 +18,18 @@
     });
   }
 
+  /**
+   * Settings only. The content script needs them (to decide whether it may run
+   * here at all) before it needs anything else, and normalising a whole state
+   * — every echo plus up to maxStatsPages counters — to read them is wasted work.
+   */
+  function loadSettings() {
+    return ext.get(schema.STORAGE_KEY).then(function (res) {
+      var raw = res && res[schema.STORAGE_KEY];
+      return schema.normalizeSettings(raw && raw.settings);
+    });
+  }
+
   function op(opObj) {
     return ext.request({ type: 'PE_OP', op: opObj });
   }
@@ -38,7 +50,17 @@
     };
   }
 
+  /*
+   * Newest first. The sorted array is memoised on the state object, because a
+   * single render asks for it several times (the list itself, the toolbar count
+   * and one pass per filter chip) and the state is only ever swapped wholesale.
+   * Callers get a fresh array from filter()/slice() before they sort.
+   */
+  var listCacheFor = null;
+  var listCache = [];
+
   function list(state) {
+    if (state === listCacheFor) return listCache;
     var out = [];
     var caps = (state && state.echoes) || {};
     Object.keys(caps).forEach(function (id) {
@@ -47,6 +69,8 @@
     out.sort(function (a, b) {
       return (b.createdAt || 0) - (a.createdAt || 0);
     });
+    listCacheFor = state;
+    listCache = out;
     return out;
   }
 
@@ -80,6 +104,7 @@
 
   PE.store = {
     load: load,
+    loadSettings: loadSettings,
     op: op,
     subscribe: subscribe,
     list: list,

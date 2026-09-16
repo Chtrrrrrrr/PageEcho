@@ -28,6 +28,7 @@
     theme: 'auto', // auto | light | dark
     contextMenu: true,
     disabledHosts: [], // hostnames to stay out of, ".example.com" covers subdomains
+    disabledPages: [], // page addresses that get no floating button, matched by prefix
     defaultScope: 'page',
     defaultQueryMode: 'ignore',
     defaultDwellMinutes: 10,
@@ -70,6 +71,14 @@
           .filter(function (h) {
             return h && h !== '.';
           })
+          .slice(0, 200)
+      : [];
+    s.disabledPages = Array.isArray(s.disabledPages)
+      ? s.disabledPages
+          .map(function (p) {
+            return String(p || '').trim();
+          })
+          .filter(Boolean)
           .slice(0, 200)
       : [];
     s.fab = !!s.fab;
@@ -244,9 +253,7 @@
         state.stats[bucket][k] = {
           visits: Math.max(0, Math.round(Number(v.visits) || 0)),
           firstSeen: Number(v.firstSeen) || 0,
-          lastSeen: Number(v.lastSeen) || 0,
-          title: String(v.title || '').slice(0, 200),
-          dwellMs: Math.max(0, Number(v.dwellMs) || 0)
+          lastSeen: Number(v.lastSeen) || 0
         };
       });
     });
@@ -335,20 +342,15 @@
   PE.schema = {
     SCHEMA_VERSION: SCHEMA_VERSION,
     STORAGE_KEY: STORAGE_KEY,
-    TRIGGER_TYPES: TRIGGER_TYPES,
     SCOPES: SCOPES,
-    QUERY_MODES: QUERY_MODES,
     MAX_TEXT: MAX_TEXT,
     DEFAULT_SETTINGS: DEFAULT_SETTINGS,
-    defaultState: defaultState,
     normalizeSettings: normalizeSettings,
     normalizeTrigger: normalizeTrigger,
-    normalizeMatch: normalizeMatch,
     normalizeEcho: normalizeEcho,
     normalizeState: normalizeState,
     createEcho: createEcho,
     triggerLabel: triggerLabel,
-    scopeLabel: scopeLabel,
     statusOf: statusOf,
     statusLabel: statusLabel,
     computeSnooze: computeSnooze,

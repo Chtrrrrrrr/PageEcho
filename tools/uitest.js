@@ -236,23 +236,25 @@ function texts(nodes) {
     ok('stylesheet defines ' + needle.replace('\\', ''), Array.from(selectors).some((s) => re.test(s)));
   });
 
-  // --- clean depth model: crisp highlights, no blurry dual shadows --------
-  ok('crisp depth tokens defined', /--pe-e1:/.test(sharedSheet) && /--pe-in-2:/.test(sharedSheet) && /--pe-hi:/.test(sharedSheet));
+  // --- Primer structure: hairlines, one radius scale, one shadow scale ----
+  ok('the shadow scale is defined', /--pe-e1:/.test(sharedSheet) && /--pe-e2:/.test(sharedSheet) && /--pe-e3:/.test(sharedSheet));
   ok('blurry neumorphic shadow tokens are gone', sharedSheet.indexOf('--pe-nm-') < 0);
-  ok('overlays keep a single tight shadow', /\.pe-card\s*\{[^}]*box-shadow:\s*var\(--pe-e3\)/.test(sharedSheet));
-  ok('controls do not stack a second shadow', /\.pe-btn\s*\{[^}]*box-shadow:\s*var\(--pe-e1\),\s*var\(--pe-hi\)/.test(sharedSheet));
-  ok('nested surfaces carry no outer shadow', /\.pe-reply\s*\{[^}]*\n?\s*\}?/.test(sharedSheet) && !/\.pe-reply\s*\{[^}]*box-shadow:\s*var\(--pe-e/.test(sharedSheet));
-  ok('frosted blur is applied to the card', /\.pe-card\s*\{[^}]*backdrop-filter:\s*blur\(var\(--pe-blur\)\)/.test(sharedSheet));
+  ok('overlays take the large shadow', /\.pe-card,\s*\.pe-modal__panel,\s*\.pe-toast\s*\{[^}]*box-shadow:\s*var\(--pe-e3\)/.test(sharedSheet));
+  ok('rows take the small shadow', /\.mg-panel,\s*\.mg-card,\s*\.pp-page,\s*\.pp-item\s*\{[^}]*box-shadow:\s*var\(--pe-e1\)/.test(sharedSheet));
+  ok('controls carry one small shadow', /\.pe-btn\s*\{[^}]*box-shadow:\s*var\(--pe-e1\)/.test(sharedSheet));
+  ok('nested surfaces carry no outer shadow', !/\.pe-reply\s*\{[^}]*box-shadow/.test(sharedSheet) && !/\.pe-section\s*\{[^}]*box-shadow/.test(sharedSheet));
+  // The glass era is gone for good: nothing samples the page behind us.
+  ok('no backdrop filter anywhere', sharedSheet.indexOf('backdrop-filter') < 0 && mgrCss.indexOf('backdrop-filter') < 0 && popCss.indexOf('backdrop-filter') < 0);
+  ok('no glass optics tokens survive', ['--pe-blur', '--pe-sat', '--pe-lum', '--pe-sheen', '--pe-cap', '--pe-hi:', '--pe-glass'].every((t) => sharedSheet.indexOf(t) < 0));
 
   // --- no fringe on filled surfaces ---------------------------------------
   // Reported from a screenshot: a saturated fill plus the white top highlight
   // produced a bright fringe that arced around the button's corners, and the
   // transparent border left a 1px ring of the fill showing through.
   ok('filled buttons take no top highlight', !/\.pe-btn--primary\s*\{[^}]*--pe-hi/.test(sharedSheet));
-  ok('filled buttons paint their own border colour', /\.pe-btn--primary\s*\{[^}]*border-color:\s*var\(--pe-accent\)/.test(sharedSheet));
+  ok('filled buttons paint their own border colour', /\.pe-btn--primary\s*\{[^}]*border-color:\s*var\(--pe-primary\)/.test(sharedSheet));
   ok('no transparent border on filled buttons', !/\.pe-btn--(?:primary|danger-armed)\s*\{[^}]*border-color:\s*transparent/.test(sharedSheet));
   ok('the armed danger button is flat-filled too', /\.pe-btn--danger-armed\s*\{[^}]*border-color:\s*var\(--pe-danger\)/.test(sharedSheet));
-  ok('light-theme top highlight is softened', /--pe-hi:\s*inset 0 1px 0 rgba\(255, 255, 255, 0\.75\)/.test(sharedSheet));
   // Reported from a screenshot: a solid accent bar pinned to the card's top edge.
   ok('the card has no accent stripe', !/\.pe-card__stripe/.test(sharedSheet));
 
@@ -275,13 +277,44 @@ function texts(nodes) {
   ok('every animation collapses under reduced motion', /@media \(prefers-reduced-motion: reduce\)[\s\S]*animation-duration:\s*0\.01ms !important[\s\S]*transition-duration:\s*0\.01ms !important/.test(sharedSheet));
 
   // --- popup frame ---------------------------------------------------------
-  ok('the popup root requests rounded corners', /html\s*\{[^}]*border-radius:\s*14px/.test(popCss) && /html\s*\{[^}]*overflow:\s*hidden/.test(popCss));
-  ok('the popup paints its background on the root', /html\s*\{[^}]*background:\s*#0f1319/.test(popCss) && /body\s*\{[^}]*background:\s*transparent/.test(popCss));
+  ok('the popup root requests rounded corners', /html\s*\{[^}]*border-radius:\s*12px/.test(popCss) && /html\s*\{[^}]*overflow:\s*hidden/.test(popCss));
+  ok('the popup paints its background on the root', /html\s*\{[^}]*background:\s*#0d1117/.test(popCss) && /body\s*\{[^}]*background:\s*transparent/.test(popCss));
+  ok('the popup header is a sticky bar over a hairline', /\.pp-head\s*\{[^}]*position:\s*sticky/.test(popCss) && /\.pp-head\s*\{[^}]*border-bottom:\s*1px solid var\(--pe-line\)/.test(popCss));
 
-  // --- cool palette -------------------------------------------------------
-  ok('cool accent is defined', /--pe-accent:\s*#4d9fe0/.test(sharedSheet));
+  // --- Primer palette -----------------------------------------------------
+  ok('the Primer accent is defined for both themes', /--pe-accent:\s*#1f6feb/.test(sharedSheet) && /--pe-accent:\s*#0969da/.test(sharedSheet));
+  ok('the primary action is GitHub green, apart from the accent', /--pe-primary:\s*#238636/.test(sharedSheet) && /--pe-primary:\s*#1f883d/.test(sharedSheet));
+  ok('borders and canvases are Primer greys', /--pe-line:\s*#d0d7de/.test(sharedSheet) && /--pe-line:\s*#30363d/.test(sharedSheet) && /--pe-canvas:\s*#0d1117/.test(sharedSheet) && /--pe-canvas:\s*#ffffff/.test(sharedSheet));
   ok('no warm amber left in the design system', sharedSheet.indexOf('217, 154, 53') < 0 && sharedSheet.indexOf('#d99a35') < 0);
-  ok('manager page wash is cool', /rgba\(77,\s*159,\s*224/.test(mgrCss) && mgrCss.indexOf('217, 154, 53') < 0);
+  ok('the manager page is a flat canvas, not a wash', /html\s*\{[^}]*background-color:\s*#0d1117/.test(mgrCss) && /html\[data-theme="light"\]\s*\{[^}]*background-color:\s*#ffffff/.test(mgrCss));
+  // The page stylesheets cannot read .pe-root's variables (html sits above it),
+  // so they mirror the canvas by hand — the one place a literal is allowed, and
+  // it has to be the token's own value.
+  ok('the page canvases mirror the canvas token',
+    /--pe-canvas:\s*#0d1117/.test(sharedSheet) && /--pe-canvas:\s*#ffffff/.test(sharedSheet) &&
+      /html\s*\{[^}]*background:\s*#0d1117/.test(popCss) && /html\[data-theme="light"\]\s*\{[^}]*background:\s*#ffffff/.test(popCss));
+
+  // --- the token set closes: nothing is referenced that nobody defines -----
+  // The three stylesheets now share one palette across four surfaces and three
+  // themes; a typo in a var() name would silently fall back to nothing.
+  const declaredTokens = new Set((sharedSheet.match(/--pe-[a-z0-9-]+(?=\s*:)/g) || []));
+  const usedTokens = new Set();
+  (sharedSheet + mgrCss + popCss).replace(/var\((--pe-[a-z0-9-]+)/g, (m, t) => {
+    usedTokens.add(t);
+    return m;
+  });
+  const missingTokens = Array.from(usedTokens).filter((t) => !declaredTokens.has(t));
+  ok('every design token a rule references is defined', missingTokens.length === 0, missingTokens);
+  // A lost brace swallows every rule after it, which is how the page inherits a
+  // half-applied restyle without a single error in the console.
+  [
+    ['manager', mgrCss, 25],
+    ['popup', popCss, 20]
+  ].forEach(([label, css, floor]) => {
+    const opens = (css.match(/\{/g) || []).length;
+    const closes = (css.match(/\}/g) || []).length;
+    ok('the ' + label + ' stylesheet is balanced and non-trivial', opens === closes && opens >= floor, opens + ' open / ' + closes + ' close');
+  });
 
   // --- readable type, density from layout ---------------------------------
   ok('type scale is readable', /--pe-fs-base:\s*14px/.test(sharedSheet) && /--pe-fs-body:\s*15px/.test(sharedSheet));
@@ -292,38 +325,202 @@ function texts(nodes) {
   ok('popup merges schedule and actions into one row', /\.pp-item__footrow\s*\{[^}]*display:\s*flex/.test(popCss));
   ok('manager DOM uses the merged row', doc.querySelectorAll('.mg-card__footrow').length > 0);
 
-  // --- glass, applied consistently ----------------------------------------
+  // --- surfaces, applied consistently -------------------------------------
   // The card flashed on load: the batch carries an animation-delay, and
   // without fill-mode backwards the card paints fully visible during it, then
   // snaps to the keyframe start.
   ok('the card entrance fills backwards, so nothing flashes before the slide', /\.pe-card\.pe-in\s*\{[^}]*animation:\s*pe-slide-in[^;]*backwards/.test(sharedSheet));
   ok('the modal entrance fills backwards too', /\.pe-modal__panel\s*\{[^}]*animation:\s*pe-rise[^;]*backwards/.test(sharedSheet));
-  ok('glass tokens exist for every theme', (sharedSheet.match(/--pe-glass:/g) || []).length === 3 && (sharedSheet.match(/--pe-tint-strong:/g) || []).length === 3);
+  ok('every theme defines the full surface set', (sharedSheet.match(/--pe-tint:/g) || []).length === 3 && (sharedSheet.match(/--pe-tint-strong:/g) || []).length === 3 && (sharedSheet.match(/--pe-subtle:/g) || []).length === 3 && (sharedSheet.match(/--pe-canvas:/g) || []).length === 3);
 
-  const sheenRule = (sharedSheet.match(/\.pe-card,[\s\S]*?background-image:\s*var\(--pe-sheen\);\s*\}/) || [''])[0];
+  // One shared recipe paints every panel that floats above the page: the same
+  // canvas, the same hairline, the same radius. This single rule is what stops
+  // the in-page card and the manager row from drifting into two materials.
+  const surfaceRule = (sharedSheet.match(/\.pe-card,[\s\S]*?box-shadow:\s*var\(--pe-e1\);\s*\}/) || [''])[0];
   ok(
-    'one sheen rule covers every floating panel',
-    ['pe-modal__panel', 'pe-fab', 'pe-toast', 'mg-panel', 'mg-card', 'pp-page', 'pp-item'].every((c) => sheenRule.indexOf(c) >= 0),
-    sheenRule.slice(0, 80)
+    'one surface rule covers every floating panel',
+    ['pe-modal__panel', 'pe-fab', 'pe-toast', 'mg-panel', 'mg-card', 'pp-page', 'pp-item'].every((c) => surfaceRule.indexOf(c) >= 0),
+    surfaceRule.slice(0, 80)
   );
-  ok('the modal panel is glass, not a flat plate', /\.pe-modal__panel\s*\{[^}]*background:\s*var\(--pe-tint-strong\)[\s\S]{0,220}?backdrop-filter:\s*blur\(var\(--pe-blur\)\)/.test(sharedSheet));
-  ok('every floating panel shares one blur radius', !/blur\((?!var\(--pe-blur\))\d/.test(sharedSheet));
-  ok('nested panels stay unblurred', !/\.pe-section\s*\{[^}]*backdrop-filter/.test(sharedSheet) && !/\.pe-reply\s*\{[^}]*backdrop-filter/.test(sharedSheet));
-  ok('page panels stay translucent', !/\.mg-card\s*\{[^}]*background:\s*#/.test(mgrCss) && !/\.pp-item\s*\{[^}]*background:\s*#/.test(popCss));
+  ok(
+    'that recipe is a canvas, a hairline and a radius',
+    /background-color:\s*var\(--pe-tint\)/.test(surfaceRule) && /border:\s*1px solid var\(--pe-line\)/.test(surfaceRule) && /border-radius:\s*var\(--pe-r\)/.test(surfaceRule)
+  );
+  ok('the dialog is a canvas panel, not a plate of glass', /\.pe-modal__panel\s*\{[^}]*background-color:\s*var\(--pe-tint-strong\)/.test(sharedSheet) && !/\.pe-modal__panel\s*\{[^}]*backdrop-filter/.test(sharedSheet));
+  ok('the dialog is split by header and footer hairlines', /\.pe-modal__title\s*\{[^}]*border-bottom:\s*1px solid var\(--pe-line\)/.test(sharedSheet) && /\.pe-modal__foot\s*\{[^}]*border-top:\s*1px solid var\(--pe-line\)/.test(sharedSheet));
+  ok('nested boxes stay flat', !/\.pe-section\s*\{[^}]*box-shadow/.test(sharedSheet) && !/\.pe-reply\s*\{[^}]*box-shadow/.test(sharedSheet));
+  ok('page panels are opaque canvas', !/\.(mg|pp)-[a-z0-9-]+\s*\{[^}]*\bbackground(-color)?:\s*rgba/.test(mgrCss + popCss));
   // The manager and popup used the subtle control fill while in-page cards used
   // the panel tint, which read as two different styles. They now share one.
   ok('manager panels use the panel tint', /\.mg-card\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(mgrCss) && /\.mg-panel\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(mgrCss));
-  ok('manager rows carry the glass rim', /\.mg-card\s*\{[^}]*box-shadow:[^;]*var\(--pe-hi\)/.test(mgrCss));
-  ok('the manager header is a glass bar', /\.mg-head\s*\{[^}]*backdrop-filter:\s*blur\(var\(--pe-blur\)\)/.test(mgrCss) && /\.mg-popup-fake|\.mg-head\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(mgrCss));
-  ok('popup panels match the same recipe', /\.pp-item\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(popCss) && /\.pp-page\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(popCss) && /\.pp-head\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(popCss));
-  ok('no page surface is left opaque', !/\.(mg|pp)-[a-z0-9-]+\s*\{[^}]*\bbackground(-color)?:\s*#/.test(mgrCss + popCss));
+  ok('manager rows carry a hairline', /\.mg-card\s*\{[^}]*border:\s*1px solid var\(--pe-line\)/.test(mgrCss));
+  ok('the manager header is a sticky toolbar Box', /\.mg-head\s*\{[^}]*position:\s*sticky/.test(mgrCss) && /\.mg-head\s*\{[^}]*background-color:\s*var\(--pe-subtle\)/.test(mgrCss) && /\.mg-head\s*\{[^}]*border:\s*1px solid var\(--pe-line\)/.test(mgrCss));
+  ok('popup panels match the same recipe', /\.pp-item\s*\{[^}]*background-color:\s*var\(--pe-tint\)/.test(popCss) && /\.pp-page\s*\{[^}]*background-color:\s*var\(--pe-subtle\)/.test(popCss) && /\.pp-head\s*\{[^}]*background-color:\s*var\(--pe-subtle\)/.test(popCss));
+
+  // --- Primer details: the parts that make a surface read as GitHub -------
+  // A canvas and a hairline are only half of it. These cover the rest: the
+  // control border, the focus ring, the radius scale, the neutral selection
+  // wash that navigation uses, and the accent tint that toggles use.
+  ok('every theme has a hover tint of its own', (sharedSheet.match(/--pe-tint-hi:/g) || []).length === 3);
+  ok('every theme carries the control border', (sharedSheet.match(/--pe-control-border:/g) || []).length === 3);
+  ok('every theme carries a focus ring', (sharedSheet.match(/--pe-accent-ring:/g) || []).length === 3);
+  ok('the radius scale is Primer\'s: 6px boxes, 12px overlays',
+    /--pe-r-lg:\s*12px/.test(sharedSheet) && /--pe-r:\s*6px/.test(sharedSheet) && /--pe-r-sm:\s*6px/.test(sharedSheet));
+  ok('controls are bordered boxes, not shadowed blobs',
+    /\.pe-btn\s*\{[^}]*border:\s*1px solid var\(--pe-control-border\)/.test(sharedSheet) &&
+      /\.pe-chip\s*\{[^}]*border:\s*1px solid var\(--pe-control-border\)/.test(sharedSheet));
+  ok('focus is a 2px accent outline', /\.pe-btn:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--pe-accent\)/.test(sharedSheet));
+  ok('nav rows take the neutral selection wash',
+    /\.mg-filter:hover\s*\{[^}]*background-color:\s*var\(--pe-selected\)/.test(mgrCss) &&
+      /\.mg-filter\[aria-pressed="true"\]\s*\{[^}]*background-color:\s*var\(--pe-selected\)/.test(mgrCss));
+  ok('toggles take the accent tint instead', /\.pe-chip\[aria-pressed="true"\]\s*\{[^}]*background-color:\s*var\(--pe-accent-soft\)/.test(sharedSheet));
+  ok('inputs focus on the accent hairline plus a ring', /\.pe-input:focus,[\s\S]{0,220}?border-color:\s*var\(--pe-accent\);[\s\S]{0,120}?box-shadow:\s*0 0 0 3px var\(--pe-accent-ring\)/.test(sharedSheet));
+  ok('no page stylesheet paints a gradient behind its surfaces', mgrCss.indexOf('gradient(') < 0 && popCss.indexOf('gradient(') < 0);
+  // The shorthand resets background-image, which is where a wash would live.
+  // It is also how a surface ends up with no fill at all, so it stays longhand.
+  ['pe-card', 'pe-fab', 'pe-modal__panel', 'pe-toast'].forEach((cls) => {
+    const body = (sharedSheet.match(new RegExp('\\.' + cls + '\\s*\\{[^}]*\\}')) || [''])[0];
+    ok('.' + cls + ' paints its canvas in longhand',
+      body.length > 0 && body.indexOf('background:') < 0, body.slice(0, 70));
+  });
+  // A row that changed material on hover would read as a different component.
+  ok('hover goes to the subtle canvas, not another material',
+    /\.mg-card:hover\s*\{[^}]*background-color:\s*var\(--pe-tint-hi\)/.test(mgrCss) &&
+      /\.pp-item:hover\s*\{[^}]*background-color:\s*var\(--pe-tint-hi\)/.test(popCss));
+
+  // --- the inks stay readable on every surface we paint --------------------
+  // The surfaces are opaque now, so what sits behind us is irrelevant and the
+  // thing to audit is our own palette: every text token against every canvas it
+  // can land on, every status ink against its own tint (composited over the
+  // canvas it sits on), and every ink that sits *on* a saturated fill.
+  const blockOf = (start, end) => {
+    const i = sharedSheet.indexOf(start);
+    const j = i < 0 ? -1 : sharedSheet.indexOf(end, i);
+    return i < 0 || j < 0 ? '' : sharedSheet.slice(i, j);
+  };
+  const tokenOf = (block, name) => {
+    const m = block.match(new RegExp('--' + name + ':\\s*([^;]+);'));
+    return m ? m[1].replace(/\s+/g, ' ').trim() : '';
+  };
+  const rgbaOf = (v) => {
+    const m = v && v.match(/rgba?\(([^)]+)\)/);
+    if (!m) return null;
+    const p = m[1].split(',').map((x) => parseFloat(x));
+    return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+  };
+  const hexOf = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const chan = (c) => {
+    c = c / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const lumOf = (c) => 0.2126 * chan(c[0]) + 0.7152 * chan(c[1]) + 0.0722 * chan(c[2]);
+  const overOf = (fg, a, bg) => fg.map((c, i) => c * a + bg[i] * (1 - a));
+  const ratioOf = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  const isHex = (v) => /^#[0-9a-f]{6}$/i.test(v);
+
+  const themes = {
+    dark: blockOf('\n.pe-root {', '\n  font-family'),
+    light: blockOf('.pe-root[data-theme="light"] {', '\n}'),
+    'auto light': blockOf('.pe-root[data-theme="auto"] {', '\n  }')
+  };
+  // Every canvas a token can be painted on, and the floors from the brief:
+  // body copy 7:1, secondary text 4.5:1, meta text 3:1.
+  const surfaceTokens = [
+    ['a panel', 'pe-tint'],
+    ['the subtle canvas', 'pe-subtle'],
+    ['a control', 'pe-control'],
+    ['a field', 'pe-sunken']
+  ];
+  const textTokens = [
+    ['body text', 'pe-fg', 7],
+    ['secondary text', 'pe-fg-dim', 4.5],
+    ['meta text', 'pe-fg-faint', 3]
+  ];
+
+  Object.keys(themes).forEach((themeName) => {
+    const b = themes[themeName];
+    const surfaces = surfaceTokens.map(([label, token]) => {
+      const hex = tokenOf(b, token);
+      return [label, isHex(hex) ? hexOf(hex) : null];
+    });
+    if (surfaces.some(([, c]) => !c)) {
+      ok(themeName + ' surfaces resolve to solid canvas colours', false, surfaceTokens.map((t) => tokenOf(b, t[1])).join(' '));
+      return;
+    }
+    textTokens.forEach(([label, token, floor]) => {
+      const ink = tokenOf(b, token);
+      if (!isHex(ink)) {
+        ok(themeName + ' ' + label + ' resolves to a colour', false, token);
+        return;
+      }
+      let worst = { r: Infinity, label: '' };
+      surfaces.forEach(([where, c]) => {
+        const r = ratioOf(lumOf(hexOf(ink)), lumOf(c));
+        if (r < worst.r) worst = { r, label: where };
+      });
+      ok(
+        themeName + ' keeps ' + label + ' at ' + worst.r.toFixed(2) + ':1 on every canvas (floor ' + floor + ')',
+        worst.r >= floor,
+        'worst case: ' + worst.label
+      );
+    });
+
+    // A saturated fill is not readable as text, so every colour that ends up as
+    // a label has an ink of its own — checked on the bare canvas (floor 4.5)
+    // and on its own tint, which is the lighter of the two.
+    const inks = [
+      ['accent', 'pe-accent-fg', 'pe-accent-soft', 4.5],
+      ['status ok', 'pe-ok-fg', 'pe-ok-soft', 3],
+      ['status snoozed', 'pe-info-fg', 'pe-info-soft', 3],
+      ['destructive', 'pe-danger-fg', 'pe-danger-tint', 3]
+    ];
+    const panel = hexOf(tokenOf(b, 'pe-tint'));
+    inks.forEach(([label, inkToken, fillToken, tintFloor]) => {
+      const ink = tokenOf(b, inkToken);
+      const fill = rgbaOf(tokenOf(b, fillToken));
+      if (!isHex(ink) || !fill) {
+        ok(themeName + ' ' + label + ' label has an ink', false, inkToken + ' missing');
+        return;
+      }
+      const onPanel = ratioOf(lumOf(hexOf(ink)), lumOf(panel));
+      const onTint = ratioOf(lumOf(hexOf(ink)), lumOf(overOf(fill.slice(0, 3), fill[3], panel)));
+      ok(
+        themeName + ' ' + label + ' label holds ' + onPanel.toFixed(2) + ':1 on a panel (floor 4.5)',
+        onPanel >= 4.5,
+        inkToken
+      );
+      ok(
+        themeName + ' ' + label + ' label holds ' + onTint.toFixed(2) + ':1 on its own tint (floor ' + tintFloor + ')',
+        onTint >= tintFloor,
+        fillToken
+      );
+    });
+
+    // Inks that sit *on* a saturated fill: the primary button, the accent fill
+    // (selected toggles, the checked checkbox) and the armed danger button.
+    const filled = [
+      ['the primary button', 'pe-primary-ink', 'pe-primary'],
+      ['the accent fill', 'pe-accent-ink', 'pe-accent'],
+      ['the armed danger button', 'pe-danger-ink', 'pe-danger']
+    ];
+    filled.forEach(([label, inkToken, fillToken]) => {
+      const ink = tokenOf(b, inkToken);
+      const fill = tokenOf(b, fillToken);
+      const r = isHex(ink) && isHex(fill) ? ratioOf(lumOf(hexOf(ink)), lumOf(hexOf(fill))) : 0;
+      ok(themeName + ' ' + label + ' holds ' + r.toFixed(2) + ':1 (floor 4.5)', r >= 4.5, fillToken);
+    });
+  });
+  ok('every theme defines the label inks',
+    ['pe-accent-fg', 'pe-ok-fg', 'pe-info-fg', 'pe-danger-fg'].every(
+      (n) => (sharedSheet.match(new RegExp('--' + n + ':', 'g')) || []).length === 3
+    ));
   ok('cards stack in one fixed column', /\.pe-stack\s*\{[^}]*position:\s*fixed/.test(sharedSheet) && /\.pe-card\s*\{[^}]*position:\s*relative/.test(sharedSheet));
   ok('the stack is bottom-anchored and side-aware', /\.pe-stack\[data-side="right"\]\s*\{[^}]*right:\s*20px/.test(sharedSheet) && /\.pe-stack\[data-side="left"\]\s*\{[^}]*left:\s*20px/.test(sharedSheet));
   ok('a leaving card collapses its own space', /\.pe-card\.pe-out\s*\{[^}]*height:\s*0[\s\S]{0,140}?margin-top:\s*0/.test(sharedSheet) && /\.pe-card\s*\{[^}]*transition:\s*height/.test(sharedSheet));
   ok('a leaving card also slides out sideways', /\.pe-card\.pe-out\s*\{[^}]*transform:\s*translateX\(var\(--pe-enter-x\)\)/.test(sharedSheet) && /\.pe-card\s*\{[^}]*transition:[^;]*transform/.test(sharedSheet));
   ok('the stack is not a scroll container', !/\.pe-stack\s*\{[^}]*overflow/.test((sharedSheet.match(/\.pe-stack\s*\{[\s\S]*?\}/) || [''])[0]) && !/\.pe-stack\s*\{[^}]*max-height/.test((sharedSheet.match(/\.pe-stack\s*\{[\s\S]*?\}/) || [''])[0]));
   ok('stacked cards share the viewport height', /\.pe-stack > \.pe-card:not\(:only-child\)\s*\{[^}]*max-height/.test(sharedSheet));
-  ok('the rail crossfades instead of interpolating hue', /\.pe-card__timer-fill\.pe-soon\s*\{\s*background:\s*var\(--pe-danger\)/.test(sharedSheet) && /\.pe-card__timer-fill\s*\{[^}]*transition:\s*background-color/.test(sharedSheet));
+  ok('the rail crossfades instead of interpolating hue', /\.pe-card__timer-fill\.pe-soon\s*\{\s*background-color:\s*var\(--pe-danger\)/.test(sharedSheet) && /\.pe-card__timer-fill\s*\{[^}]*transition:[^;]*background-color/.test(sharedSheet));
   ok('the countdown rail sits at the card bottom', /\.pe-card__timer\s*\{[^}]*height:\s*3px/.test(sharedSheet) && /\.pe-card__timer-fill\s*\{[^}]*transform-origin:\s*left/.test(sharedSheet));
   ok('printing hides everything of ours', /@media print\s*\{\s*\.pe-root\s*\{\s*display:\s*none\s*!important/.test(sharedSheet));
 
@@ -336,7 +533,7 @@ function texts(nodes) {
   ok('inputs carry an explicit height', /\.pe-input,\s*\.pe-select\s*\{[^}]*height:\s*32px/.test(sharedSheet));
   ok('chips and pills carry explicit heights', /\.pe-chip\s*\{[^}]*min-height:\s*24px/.test(sharedSheet) && /\.pe-pill\s*\{[^}]*min-height:\s*19px/.test(sharedSheet));
   ok('no fractional line-heights anywhere', !/line-height:\s*1\.\d/.test(sharedSheet + mgrCss + popCss));
-  ok('no brightness filters promoting layers', !/[^-]filter:\s*[a-z]/.test(sharedSheet));
+  ok('no brightness filters promoting layers', !/\bfilter:\s*(?:blur|brightness|saturate|contrast|grayscale|hue-rotate|drop-shadow|invert|sepia)\(/.test(sharedSheet));
   ok('page stylesheets size buttons with min-height', /\.mg-card__actions \.pe-btn\s*\{[^}]*min-height:\s*26px/.test(mgrCss) && /\.pp-item__foot \.pe-btn\s*\{[^}]*min-height:\s*24px/.test(popCss));
 
   // --- form controls ------------------------------------------------------
@@ -344,7 +541,7 @@ function texts(nodes) {
   // it rendered as a black box on our dark panel, so it is drawn by hand now.
   const checkboxRule = (sharedSheet.match(/\.pe-root input\[type="checkbox"\]\s*\{[\s\S]*?\}/) || [''])[0];
   ok('checkbox is drawn by hand, not by the UA', /appearance:\s*none/.test(checkboxRule), checkboxRule.slice(0, 60));
-  ok('unchecked checkbox is a light box', /background:\s*#ffffff/.test(checkboxRule), checkboxRule);
+  ok('unchecked checkbox is an inset box with a hairline', /background:\s*var\(--pe-sunken\)/.test(checkboxRule) && /border:\s*1px solid var\(--pe-line-strong\)/.test(checkboxRule), checkboxRule);
   ok('checked checkbox uses the accent fill', /\.pe-root input\[type="checkbox"\]:checked\s*\{[^}]*background:\s*var\(--pe-accent\)/.test(sharedSheet));
   ok('checked checkbox draws a tick', /\.pe-root input\[type="checkbox"\]:checked::after\s*\{[^}]*opacity:\s*1/.test(sharedSheet));
   ok('no leftover accent-color on our checkbox', !/\.pe-check input\s*\{[^}]*accent-color/.test(sharedSheet));
@@ -352,15 +549,35 @@ function texts(nodes) {
 
   // --- destructive action escalation --------------------------------------
   ok('danger tint tokens defined for every theme', (sharedSheet.match(/--pe-danger-tint:/g) || []).length === 3, (sharedSheet.match(/--pe-danger-tint:/g) || []).length);
-  ok('danger hover uses the strong tint', /\.pe-btn--danger:hover\s*\{[^}]*background:\s*var\(--pe-danger-tint\)/.test(sharedSheet));
+  ok('danger hover uses the strong tint', /\.pe-btn--danger:hover\s*\{[^}]*background-color:\s*var\(--pe-danger-tint\)/.test(sharedSheet));
   ok('danger hover no longer uses the faint 13% wash', !/\.pe-btn--danger:hover\s*\{[^}]*var\(--pe-danger-soft\)/.test(sharedSheet));
-  const tint = Number((sharedSheet.match(/--pe-danger-tint:\s*rgba\(226,\s*106,\s*134,\s*([\d.]+)\)/) || [])[1]);
+  const tint = Number((sharedSheet.match(/--pe-danger-tint:\s*rgba\(248,\s*81,\s*73,\s*([\d.]+)\)/) || [])[1]);
   ok('dark-theme danger hover is at least 25% opaque (' + tint + ')', tint >= 0.25, tint);
 
   // --- card footer: one row, small gaps ------------------------------------
   ok('card footer keeps a small fixed gap', /\.pe-card__foot\s*\{[^}]*gap:\s*6px/.test(sharedSheet));
   ok('card footer no longer uses space-between', !/\.pe-card__foot\s*\{[^}]*justify-content:\s*space-between/.test(sharedSheet));
   ok('card footer buttons grow to fill the row', /\.pe-card__foot > \.pe-btn\s*\{\s*flex:\s*1 1 auto/.test(sharedSheet));
+
+  // --- leaving a stack that is still moving --------------------------------
+  // The exit has to win over the frame the script pins inline before it starts,
+  // or the card snaps: the pins carry the frame that is on screen, the exit
+  // state carries the target, and the transition runs between them.
+  ok(
+    'the exit state outranks the pinned frame',
+    /\.pe-card\.pe-out\s*\{[^}]*height:\s*0\s*!important[\s\S]{0,200}?margin-top:\s*0\s*!important[\s\S]{0,200}?opacity:\s*0\s*!important[\s\S]{0,200}?transform:\s*translateX\(var\(--pe-enter-x\)\)\s*!important/.test(sharedSheet)
+  );
+  // Removing the second-to-last card lifts the half-viewport cap; animating it
+  // is what keeps the survivor from snapping into the freed space.
+  ok('the viewport cap is animated, not snapped', /\.pe-card\s*\{[^}]*transition:[^;]*max-height/.test(sharedSheet));
+
+  // --- a slot with nothing in it holds nothing open ------------------------
+  // The composer kept an empty error line and an empty trigger row right above
+  // the buttons, which read as a hole in the form.
+  ok(
+    'empty form slots collapse instead of holding a gap',
+    /\.pe-root \.pe-error:empty,[\s\S]{0,260}?\.pe-row:empty\s*\{[\s\S]{0,40}?display:\s*none/.test(sharedSheet)
+  );
 
   // --- archived vs delivered must not offer two overlapping actions --------
   const stateButtons = (card) =>
@@ -456,6 +673,30 @@ function texts(nodes) {
   ok('the context menu can be switched off', modal.textContent.indexOf('右键菜单') > 0);
   ok('sites can be excluded', modal.textContent.indexOf('不在这些站点运行') > 0 && !!modal.querySelector('textarea'));
   ok('the exclusion hint explains the syntax', modal.textContent.indexOf('.example.com') > 0);
+  ok('single pages can be excluded too', modal.textContent.indexOf('这些页面不显示悬浮按钮') > 0);
+  ok('the page list explains how it matches', modal.textContent.indexOf('按前缀匹配') > 0);
+
+  // The button's own settings fold away with the button.
+  const rowByLabel = (label) =>
+    Array.from(modal.querySelectorAll('.mg-io__row')).find((r) => r.textContent.indexOf(label) === 0);
+  const fabSideRow = rowByLabel('悬浮按钮位置');
+  const pageListField = Array.from(modal.querySelectorAll('.pe-field')).find(
+    (f) => f.textContent.indexOf('这些页面不显示悬浮按钮') === 0
+  );
+  ok('the button has a position row and its own page list', !!fabSideRow && !!pageListField && !!pageListField.querySelector('textarea'));
+
+  const pageList = pageListField && pageListField.querySelector('textarea');
+  if (pageList) {
+    pageList.value = 'example.com/docs\nexample.com/a?x=1';
+    pageList.dispatchEvent(new win.Event('input', { bubbles: true }));
+    await sleep(700);
+    ok(
+      'the page list is stored',
+      (storage['pe:state'].settings.disabledPages || []).join('|') === 'example.com/docs|example.com/a?x=1',
+      (storage['pe:state'].settings.disabledPages || []).join('|')
+    );
+  }
+
   const themeSelect = Array.from(modal.querySelectorAll('select')).find((s) =>
     Array.from(s.options).some((o) => o.value === 'chartreuse' || o.textContent === '深色')
   );
@@ -468,6 +709,22 @@ function texts(nodes) {
   fabCheck.dispatchEvent(new win.Event('change', { bubbles: true }));
   await sleep(200);
   ok('fab setting persisted', storage['pe:state'].settings.fab === false, storage['pe:state'].settings.fab);
+  ok(
+    'turning the button off folds its own settings away',
+    fabSideRow.style.display === 'none' && pageListField.style.display === 'none',
+    [fabSideRow.style.display, pageListField.style.display]
+  );
+  fabCheck.checked = true;
+  fabCheck.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(200);
+  ok(
+    'turning it back on brings them back',
+    fabSideRow.style.display === '' && pageListField.style.display === '',
+    [fabSideRow.style.display, pageListField.style.display]
+  );
+  fabCheck.checked = false;
+  fabCheck.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await sleep(200);
   modal.querySelector('.pe-modal__foot .pe-btn--primary').click();
   await sleep(320);
   ok('settings modal closed', !doc.querySelector('.pe-modal'));

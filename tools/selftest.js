@@ -112,10 +112,9 @@ const PE = globalThis.PE;
 const { schema, matcher, bg, util } = PE;
 
 const op = (o) => bg.handleMessage({ type: 'PE_OP', op: o }).then((r) => r);
-const visit = (url, title) => op({ op: 'visit', url, title: title || '' });
+const visit = (url) => op({ op: 'visit', url });
 
 const PAGE = 'https://example.com/article?utm_source=newsletter&id=7#section-2';
-const PAGE_CLEAN = 'https://example.com/article?id=7';
 
 (async function run() {
   console.log('\nPageEcho core self-test\n');
@@ -129,7 +128,7 @@ const PAGE_CLEAN = 'https://example.com/article?id=7';
 
   /* -------------------------------------------------------------- visits -- */
   console.log('\nVisit accounting');
-  let res = await visit(PAGE, 'Example');
+  let res = await visit(PAGE);
   eq('first visit counted', res.ctx.visits, 1);
   eq('site visits counted', res.ctx.siteVisits, 1);
   eq('global visits counted', res.ctx.globalVisits, 1);
@@ -474,6 +473,45 @@ const PAGE_CLEAN = 'https://example.com/article?id=7';
     []
   );
   eq('defaults are sane', [schema.DEFAULT_SETTINGS.maxCards, schema.DEFAULT_SETTINGS.disabledHosts.length], [3, 0]);
+
+  const pages = schema.normalizeSettings({
+    disabledPages: [' example.com/docs ', '', '  ', 'example.com/blog/post-1']
+  });
+  eq('the page list is trimmed', pages.disabledPages, ['example.com/docs', 'example.com/blog/post-1']);
+  eq('a non-array page list falls back to empty', schema.normalizeSettings({ disabledPages: 'x' }).disabledPages, []);
+  eq('the page list defaults to empty', schema.DEFAULT_SETTINGS.disabledPages.length, 0);
+
+  /* -------------------------------------------------------- page blocklist -- */
+  console.log('\nPages that get no button');
+  const listed = (list, url) => matcher.pageBlocked(list, url);
+  eq('an exact address matches', listed(['example.com/docs'], 'https://example.com/docs'), true);
+  eq('a page under it matches', listed(['example.com/docs'], 'https://example.com/docs/intro'), true);
+  eq('a sibling page does not', listed(['example.com/docs'], 'https://example.com/docs2'), false);
+  eq('a half path does not', listed(['example.com/do'], 'https://example.com/docs'), false);
+  eq('a host alone covers the whole host', listed(['example.com'], 'https://example.com/anything/at/all'), true);
+  eq('and its subdomains? no — that is the host list', listed(['example.com'], 'https://sub.example.com/x'), false);
+  eq('the scheme is not part of the match', listed(['example.com/docs'], 'http://example.com/docs'), true);
+  eq('a full address with the scheme still works', listed(['https://example.com/docs'], 'https://example.com/docs'), true);
+  eq('a trailing slash changes nothing', listed(['example.com/docs/'], 'https://example.com/docs/a'), true);
+  eq('a trailing wildcard changes nothing', listed(['example.com/docs*'], 'https://example.com/docs/a'), true);
+  eq('the query takes part in the match', listed(['example.com/s?tab=1'], 'https://example.com/s?tab=1'), true);
+  eq('so a page without it is not blocked', listed(['example.com/s?tab=1'], 'https://example.com/s'), false);
+  eq('an empty list blocks nothing', listed([], 'https://example.com/docs'), false);
+  eq('a blank entry is ignored', listed(['  '], 'https://example.com/docs'), false);
+
+  /* -------------------------------------------------- page controls vs ours -- */
+  console.log('\nWhat counts as a control in the corner');
+  const control = (facts) => util.looksLikeControl(facts);
+  eq('a button is a control', control({ tag: 'BUTTON' }), true);
+  eq('so is a submit input', control({ tag: 'INPUT', type: 'submit' }), true);
+  eq('so is a select', control({ tag: 'SELECT' }), true);
+  eq('a text field is not', control({ tag: 'INPUT', type: 'text' }), false);
+  eq('a role=button div is', control({ tag: 'DIV', role: 'button' }), true);
+  eq('a plain link is not', control({ tag: 'A', cursor: 'pointer' }), false);
+  eq('a link painted like a button is', control({ tag: 'A', cursor: 'pointer', painted: true, rounded: true }), true);
+  eq('a text column is not', control({ tag: 'DIV', cursor: 'auto' }), false);
+  eq('a clickable card is', control({ tag: 'DIV', cursor: 'pointer', painted: true, rounded: true }), true);
+  eq('a bare div with a background is not', control({ tag: 'DIV', painted: true }), false);
 
   /* ------------------------------------------------------------ robustness -- */
   console.log('\nRobustness');
