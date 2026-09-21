@@ -1,10 +1,10 @@
 # PageEcho · 页面回声
 
-![GitHub stars](https://img.shields.io/github/stars/Chtrrrrrrr/PageEcho?style=social)
 ![version](https://img.shields.io/badge/version-1.1.2-blue)
 ![manifest](https://img.shields.io/badge/manifest-v3-blue)
 ![platform](https://img.shields.io/badge/chrome%20%7C%20firefox-115%2B-brightgreen)
 ![privacy](https://img.shields.io/badge/data-local%20only-lightgrey)
+![Vibe%20Coded](https://img.shields.io/badge/vibe--coded-yes-ff69b4.svg)
 
 > 在任意网页留下一句话。当你再次访问并满足条件时，它会在页面里滑出。
 
