@@ -6,7 +6,7 @@
 ![privacy](https://img.shields.io/badge/data-local%20only-lightgrey)
 ![Vibe%20Coded](https://img.shields.io/badge/vibe--coded-yes-ff69b4.svg)
 
-> 在任意网页留下一句话。当你再次访问并满足条件时，它会在页面里滑出。
+在任意网页里留下提示/备注文本。
 
 > [!NOTE]
 > 本项目是 vibecoding 产物，请在安装前自行审阅源码。
